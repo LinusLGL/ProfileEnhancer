@@ -8,6 +8,7 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 import os
+import sys
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -17,21 +18,14 @@ from generator import JobDescriptionGenerator
 # Load environment variables
 load_dotenv()
 
-# Cloud deployment compatibility check
-try:
-    test_scraper = JobPortalScraper()
-    WEB_SCRAPING_AVAILABLE = True
-except Exception as e:
-    WEB_SCRAPING_AVAILABLE = False
-    st.warning("⚠️ Web scraping features are limited in cloud deployment. AI generation will work without web data.")
-
-# Page configuration
-st.set_page_config(
-    page_title="Job Description Generator",
-    page_icon="📝",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# Debug information for deployment
+if os.getenv('STREAMLIT_RUNTIME_ENV') or 'streamlit' in sys.modules:
+    st.set_page_config(
+        page_title="SS-Finder: Job Description Generator",
+        page_icon="📝",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
 
 # Custom CSS
 st.markdown("""
@@ -275,6 +269,21 @@ def main():
     
     initialize_session_state()
     
+    # Debug mode for troubleshooting
+    debug_mode = st.sidebar.checkbox("🐛 Debug Mode", value=False)
+    
+    if debug_mode:
+        st.sidebar.write("**Debug Information:**")
+        st.sidebar.write(f"- Streamlit secrets available: {bool(st.secrets.get('openai'))}")
+        st.sidebar.write(f"- Environment OPENAI_API_KEY: {'Set' if os.getenv('OPENAI_API_KEY') else 'Not set'}")
+        
+        # Check config file
+        try:
+            from config import DEFAULT_OPENAI_API_KEY
+            st.sidebar.write(f"- Config file: Available (key length: {len(DEFAULT_OPENAI_API_KEY)})")
+        except ImportError:
+            st.sidebar.write("- Config file: Not available")
+    
     # Header
     st.markdown('<h1 class="main-header">Job Description Generator</h1>', unsafe_allow_html=True)
     st.markdown("Generate concise job descriptions with SSIC & SSO classification codes using AI and web-scraped data")
@@ -283,7 +292,7 @@ def main():
     with st.sidebar:
         st.header("⚙️ Configuration")
         
-        # API Key input with multiple fallback options
+        # API Key input with simplified fallback system
         api_key = st.text_input(
             "OpenAI API Key (Optional)",
             type="password",
@@ -291,36 +300,30 @@ def main():
             help="Enter your OpenAI API key or leave empty to use system default"
         )
         
-        # Multiple fallback options for API key
+        # Simplified fallback for API key
         if not api_key:
-            try:
-                # Try config.py first
-                from config import DEFAULT_OPENAI_API_KEY
-                api_key = DEFAULT_OPENAI_API_KEY
-                st.info("🔑 Using system default API key")
-            except ImportError:
+            # Try Streamlit secrets first
+            api_key = st.secrets.get("openai", {}).get("api_key", "")
+            
+            if not api_key:
+                # Try environment variable
+                api_key = os.getenv('OPENAI_API_KEY', '')
+                
+            if not api_key:
+                # Try local config file
                 try:
-                    # Fallback to config template for Streamlit Cloud
-                    from config import DEFAULT_OPENAI_API_KEY as template_key
-                    api_key = template_key
-                    st.info("🔑 Using system configuration")
+                    from config import DEFAULT_OPENAI_API_KEY
+                    api_key = DEFAULT_OPENAI_API_KEY
+                    st.info("🔑 Using system default API key")
                 except ImportError:
-                    try:
-                        # Last resort: check if config.template exists and rename
-                        import os
-                        if os.path.exists('config.template.py'):
-                            import importlib.util
-                            spec = importlib.util.spec_from_file_location("config_template", "config.template.py")
-                            config_template = importlib.util.module_from_spec(spec)
-                            spec.loader.exec_module(config_template)
-                            api_key = config_template.DEFAULT_OPENAI_API_KEY
-                            st.info("🔑 Using template configuration")
-                        else:
-                            st.warning("⚠️ No API key configured. Please enter your OpenAI API key.")
-                            st.stop()
-                    except Exception:
-                        st.warning("⚠️ No API key configured. Please enter your OpenAI API key.")
-                        st.stop()
+                    # Final fallback - show warning
+                    st.warning("⚠️ No API key configured. Please enter your OpenAI API key in the input field above or configure it in app secrets.")
+                    st.stop()
+        
+        # Validate API key format
+        if api_key and not api_key.startswith(('sk-', 'your_')):
+            if len(api_key) > 10:  # Only show info if we have a real key
+                st.success("🔑 API key configured successfully")
         
         # Options
         st.divider()
