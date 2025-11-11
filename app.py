@@ -284,7 +284,7 @@ def main():
         st.header("⚙️ Configuration")
         
         # API Key input with multiple fallback options
-        user_api_key = st.text_input(
+        api_key = st.text_input(
             "OpenAI API Key (Optional)",
             type="password",
             value="",  # Start empty to show fallback system working
@@ -292,83 +292,27 @@ def main():
         )
         
         # Multi-tier fallback system for API key
-        api_key = None
-        key_source = "none"
-        
-        # Priority 1: User provided key
-        if user_api_key:
-            api_key = user_api_key
-            key_source = "user_provided"
-            st.success("✅ Using your provided API key")
-        
-        # Priority 2: Streamlit secrets
         if not api_key:
-            try:
-                secrets_key = st.secrets.get("openai", {}).get("api_key", "")
-                if secrets_key:
-                    api_key = secrets_key
-                    key_source = "streamlit_secrets"
-                    st.info("🔑 Using Streamlit secrets API key")
-            except Exception:
-                pass
-        
-        # Priority 3: Environment variable
-        if not api_key:
-            try:
-                env_key = os.getenv('OPENAI_API_KEY', "")
-                if env_key:
-                    api_key = env_key
-                    key_source = "environment"
-                    st.info("🔑 Using environment variable API key")
-            except Exception:
-                pass
-        
-        # Priority 4: Config file
-        if not api_key:
-            try:
-                import sys
-                # Add current directory to Python path if not already there
-                current_dir = os.path.dirname(os.path.abspath(__file__))
-                if current_dir not in sys.path:
-                    sys.path.insert(0, current_dir)
-                
-                from config import DEFAULT_OPENAI_API_KEY
-                api_key = DEFAULT_OPENAI_API_KEY
-                key_source = "config_file"
-                st.info("🔑 Using system default API key")
-            except ImportError as e:
-                # For cloud deployment, API key must be in Streamlit secrets
-                if not api_key:
-                    st.error("❌ Please configure your OpenAI API key in Streamlit Community Cloud secrets.")
-                    st.markdown("""
-                    **To fix this:**
-                    1. Go to your Streamlit app settings
-                    2. Click on "Secrets" 
-                    3. Add the following:
-                    ```toml
-                    [openai]
-                    api_key = "your_api_key_here"
-                    ```
-                    4. Save and reboot the app
-                    """)
+            # Try Streamlit secrets first
+            api_key = st.secrets.get("openai", {}).get("api_key", "")
+            
+            if not api_key:
+                # Try environment variable
+                api_key = os.getenv('OPENAI_API_KEY', "")
+            
+            if not api_key:
+                # Try config file
+                try:
+                    from config import DEFAULT_OPENAI_API_KEY
+                    api_key = DEFAULT_OPENAI_API_KEY
+                    st.info("🔑 Using system default API key")
+                except ImportError:
+                    st.error("❌ No API key found. Please enter your OpenAI API key.")
                     st.stop()
-        
-        # Final check
-        if not api_key:
-            st.error("❌ No API key found. Please enter your OpenAI API key.")
-            st.stop()
-        
-        # Show success message for user-provided keys
-        if api_key and not st.secrets.get("openai", {}).get("api_key", "") and not os.getenv('OPENAI_API_KEY', ""):
-            # Only show this if it's likely a user-provided key
-            user_input_key = st.text_input(
-                "OpenAI API Key (Optional)",
-                type="password",
-                value="",
-                help="Enter your OpenAI API key or leave empty to use system default"
-            )
-            if user_input_key:
-                st.success("✅ Using your provided API key")
+            else:
+                st.info("🔑 Using configured API key")
+        else:
+            st.success("✅ Using your provided API key")
         
         # Options
         st.divider()
@@ -415,9 +359,9 @@ def main():
         
         with col1:
             company = st.text_input(
-                "Company Name (no acronym) *",
+                "Company Name *",
                 placeholder="e.g., Google, Microsoft, Startup Inc.",
-                help="Enter the full company name without using acronyms"
+                help="Enter the company name"
             )
         
         with col2:
