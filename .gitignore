@@ -45,6 +45,8 @@ Thumbs.db
 *.xlsx
 *.xls
 !sample_input.xlsx
+!ssic2025-classification-structure.xlsx
+!ssoc2024-classification-structure.xlsx
 
 # Streamlit
 .streamlit/
