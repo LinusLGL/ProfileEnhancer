@@ -292,32 +292,41 @@ def main():
         )
         
         # Multi-tier fallback system for API key
-        api_key = ""
-        key_source = ""
+        api_key = None
+        key_source = "none"
         
+        # Priority 1: User provided key
         if user_api_key:
             api_key = user_api_key
             key_source = "user_provided"
             st.success("✅ Using your provided API key")
-        else:
-            # Try Streamlit secrets first
-            api_key = st.secrets.get("openai", {}).get("api_key", "")
-            if api_key:
-                key_source = "streamlit_secrets"
-                st.info("🔑 Using Streamlit secrets API key")
         
+        # Priority 2: Streamlit secrets
         if not api_key:
-            # Try environment variable
-            api_key = os.getenv('OPENAI_API_KEY', "")
-            if api_key:
-                key_source = "environment"
-                st.info("🔑 Using environment variable API key")
+            try:
+                secrets_key = st.secrets.get("openai", {}).get("api_key", "")
+                if secrets_key:
+                    api_key = secrets_key
+                    key_source = "streamlit_secrets"
+                    st.info("🔑 Using Streamlit secrets API key")
+            except Exception:
+                pass
         
+        # Priority 3: Environment variable
         if not api_key:
-            # Try config file with robust path handling
+            try:
+                env_key = os.getenv('OPENAI_API_KEY', "")
+                if env_key:
+                    api_key = env_key
+                    key_source = "environment"
+                    st.info("🔑 Using environment variable API key")
+            except Exception:
+                pass
+        
+        # Priority 4: Config file
+        if not api_key:
             try:
                 import sys
-                import os
                 # Add current directory to Python path if not already there
                 current_dir = os.path.dirname(os.path.abspath(__file__))
                 if current_dir not in sys.path:
@@ -344,7 +353,10 @@ def main():
                     """)
                     st.stop()
         
-        # At this point, api_key should have a value
+        # Final check
+        if not api_key:
+            st.error("❌ No API key found. Please enter your OpenAI API key.")
+            st.stop()
         
         # Show success message for user-provided keys
         if api_key and not st.secrets.get("openai", {}).get("api_key", "") and not os.getenv('OPENAI_API_KEY', ""):
