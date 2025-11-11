@@ -1,6 +1,9 @@
 # Environment variables
 .env
 
+# Configuration with sensitive data
+config.py
+
 # Python
 __pycache__/
 *.py[cod]

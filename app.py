@@ -283,17 +283,22 @@ def main():
     with st.sidebar:
         st.header("⚙️ Configuration")
         
-        # API Key input
+        # API Key input with backend fallback
         api_key = st.text_input(
-            "OpenAI API Key",
+            "OpenAI API Key (Optional)",
             type="password",
             value=st.secrets.get("openai", {}).get("api_key", os.getenv('OPENAI_API_KEY', '')),
-            help="Enter your OpenAI API key. Get one at https://platform.openai.com/api-keys"
+            help="Enter your OpenAI API key or leave empty to use system default"
         )
         
+        # Use backend key as fallback
         if not api_key:
-            st.warning("WARNING: Please enter your OpenAI API key to continue")
-            st.stop()
+            try:
+                from config import DEFAULT_OPENAI_API_KEY
+                api_key = DEFAULT_OPENAI_API_KEY
+                st.info("🔑 Using system default API key")
+            except ImportError:
+                st.warning("⚠️ No API key configured. Please enter your OpenAI API key.")
         
         # Options
         st.divider()
