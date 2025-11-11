@@ -283,22 +283,36 @@ def main():
     with st.sidebar:
         st.header("⚙️ Configuration")
         
-        # API Key input with backend fallback
+        # API Key input with multiple fallback options
         api_key = st.text_input(
             "OpenAI API Key (Optional)",
             type="password",
-            value=st.secrets.get("openai", {}).get("api_key", os.getenv('OPENAI_API_KEY', '')),
+            value="",  # Start empty to show fallback system working
             help="Enter your OpenAI API key or leave empty to use system default"
         )
         
-        # Use backend key as fallback
+        # Multi-tier fallback system for API key
         if not api_key:
-            try:
-                from config import DEFAULT_OPENAI_API_KEY
-                api_key = DEFAULT_OPENAI_API_KEY
-                st.info("🔑 Using system default API key")
-            except ImportError:
-                st.warning("⚠️ No API key configured. Please enter your OpenAI API key.")
+            # Try Streamlit secrets first
+            api_key = st.secrets.get("openai", {}).get("api_key", "")
+            
+            if not api_key:
+                # Try environment variable
+                api_key = os.getenv('OPENAI_API_KEY', "")
+            
+            if not api_key:
+                # Try config file
+                try:
+                    from config import DEFAULT_OPENAI_API_KEY
+                    api_key = DEFAULT_OPENAI_API_KEY
+                    st.info("🔑 Using system default API key")
+                except ImportError:
+                    st.error("❌ No API key found. Please enter your OpenAI API key.")
+                    st.stop()
+            else:
+                st.info("🔑 Using configured API key")
+        else:
+            st.success("✅ Using your provided API key")
         
         # Options
         st.divider()
