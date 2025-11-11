@@ -298,7 +298,15 @@ def main():
             from config import DEFAULT_OPENAI_API_KEY
             api_key = DEFAULT_OPENAI_API_KEY
         except ImportError:
-            st.error("🔧 API configuration required. Please contact administrator.")
+            st.error("🔧 Please add your OpenAI API key to Streamlit Community Cloud secrets:")
+            st.code("""[openai]
+api_key = "your_openai_api_key_here"
+            """, language="toml")
+            st.info("📍 **Instructions:**")
+            st.info("1. Go to your app settings → Secrets")
+            st.info("2. Add the configuration above") 
+            st.info("3. Replace 'your_openai_api_key_here' with your actual API key")
+            st.info("4. Save and reboot the app")
             st.stop()
     
     # Sidebar - Options (no API key configuration needed)
