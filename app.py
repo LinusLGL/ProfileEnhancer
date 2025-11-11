@@ -279,7 +279,7 @@ def main():
         api_key = st.text_input(
             "OpenAI API Key",
             type="password",
-            value=os.getenv('OPENAI_API_KEY', ''),
+            value=st.secrets.get("openai", {}).get("api_key", os.getenv('OPENAI_API_KEY', '')),
             help="Enter your OpenAI API key. Get one at https://platform.openai.com/api-keys"
         )
         

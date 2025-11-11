@@ -1,69 +1,137 @@
-# Job Description Generator
+# SS-Finder: Singapore Job Description Generator
 
-A Streamlit application that generates detailed job descriptions based on user input by web scraping job portals and using AI to create comprehensive job descriptions.
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://ss-finder.streamlit.app)
 
-## Features
+An AI-powered job description generator with Singapore Standard Industrial Classification (SSIC 2025) and Singapore Standard Occupational Classification (SSO 2024) codes.
 
-- 🔍 **Web Scraping**: Searches multiple job portals (LinkedIn, Indeed, JobStreet, MyCareersFuture, foundit, JobsCentral)
-- 🤖 **AI-Powered Generation**: Uses OpenAI to generate detailed job descriptions
-- 📝 **Manual Input**: Enter company, job title, and initial job description
-- 📊 **Excel Processing**: Batch process multiple job descriptions from Excel files
-- 📥 **Export Results**: Download results as Excel files with generated descriptions
+## 🚀 Live Demo
 
-## Installation
+**Try the app**: [https://ss-finder.streamlit.app](https://ss-finder.streamlit.app)
 
-1. Clone or download this repository
-2. Install dependencies:
+## ✨ Key Features
+
+- **🤖 AI-Enhanced Classification**: Uses OpenAI GPT-4o-mini for intelligent business analysis
+- **🎯 5-Digit SSIC Codes**: Maximum specificity for industry classification  
+- **🔗 SSIC-SSO Compatibility**: Prevents incompatible industry-occupation pairings
+- **📊 Excel Batch Processing**: Upload files and get enhanced output with 4 new columns
+- **🌐 Web Scraping**: Integrates data from Indeed, JobStreet, MyCareersFuture
+- **🇸🇬 Singapore Standards**: SSIC 2025 (1,694 codes) + SSO 2024 (1,617 codes)
+
+## 📋 How It Works
+
+### Single Job Processing
+1. Enter company name and job title
+2. Add job description (optional)
+3. Get AI-generated job description with classification codes
+
+### Batch Excel Processing
+1. Upload Excel file with columns: `Company`, `Job Title`, `Job Description` (optional)
+2. Get your original data back with 4 additional columns:
+   - � **Generated Job Description**
+   - **Company Analysis** 
+   - **SSIC 5 digit**
+   - **SSOC 5 digit**
+
+## 🛠️ Classification Method
+
+### SSIC (Industry Classification)
+1. **Company Analysis**: AI generates industry-focused company description
+2. **5-Digit Specificity**: Ensures maximum classification detail
+3. **SSO Compatibility**: Checks logical industry-occupation pairing
+
+### SSO (Occupation Classification)  
+1. **Job Role Analysis**: Uses job title + job description
+2. **AI Enhancement**: Contextual understanding of job functions
+3. **5-Digit Precision**: Specific occupation codes
+
+## 🔧 Local Development
+
+### Prerequisites
+- Python 3.8+
+- OpenAI API key
+
+### Setup
 ```bash
+git clone https://github.com/LinusLGL/SS-Finder.git
+cd SS-Finder
 pip install -r requirements.txt
 ```
 
-3. Create a `.env` file with your API keys:
-```
-OPENAI_API_KEY=your_openai_api_key_here
-SERPAPI_KEY=your_serpapi_key_here (optional, for enhanced search)
+### Configuration
+1. Copy `.streamlit/secrets.template.toml` to `.streamlit/secrets.toml`
+2. Add your OpenAI API key to the secrets file:
+```toml
+[openai]
+api_key = "your_actual_api_key_here"
 ```
 
-## Usage
-
-1. Run the Streamlit app:
+### Run Locally
 ```bash
 streamlit run app.py
 ```
 
-2. Choose between:
-   - **Manual Input**: Enter individual job details
-   - **Excel Upload**: Process multiple jobs at once
+## 📦 Dependencies
 
-3. The app will:
-   - Search job portals for similar positions
-   - Analyze existing job descriptions
-   - Generate a comprehensive job description
+```
+streamlit>=1.28.0
+openai>=1.0.0
+pandas>=1.5.0
+beautifulsoup4>=4.12.0
+selenium>=4.0.0
+webdriver-manager>=3.8.0
+openpyxl>=3.1.0
+python-dotenv>=1.0.0
+```
 
-## Excel Format
+## 🌟 Advanced Features
 
-Your Excel file should have these columns:
-- `Company`: Company name
-- `Job Title`: Position title
-- `Job Description`: Initial/brief description (optional)
+### AI-Enhanced Classification
+- **Company Analysis**: Understands business context for accurate SSIC
+- **Compatibility Matrix**: Technology ↔ Tech roles, Finance ↔ Finance roles
+- **Confidence Boosting**: Enhanced algorithms with 60-100% accuracy
 
-The app will add a new column:
-- `Generated Job Description`: Detailed, comprehensive job description
+### Web Scraping Integration  
+- **Multiple Sources**: Indeed, JobStreet, MyCareersFuture
+- **Context Enhancement**: Real job market data improves descriptions
+- **Error Handling**: Robust fallback mechanisms
 
-## Dependencies
+### Excel Batch Processing
+- **Original Data Preserved**: All input columns maintained
+- **4 Enhanced Columns**: Job description, company analysis, SSIC, SSO
+- **Progress Tracking**: Real-time processing updates
+- **Error Reporting**: Clear success/failure indicators
 
-- Streamlit: Web interface
-- Selenium: Web scraping
-- BeautifulSoup4: HTML parsing
-- OpenAI: AI-powered text generation
-- Pandas: Excel file processing
+## 📊 Classification Examples
 
-## Notes
+| Company | Job Title | SSIC Code | Industry | SSO Code | Occupation |
+|---------|-----------|-----------|-----------|----------|------------|
+| Google | Software Engineer | 62011 | Software Development | 25121 | Software Developer |
+| DBS Bank | Financial Analyst | 64191 | Banking Services | 24131 | Financial Analyst |
+| Ministry of Health | Consultant | 84120 | Government Health | 24211 | Management Consultant |
 
-- Web scraping may be limited by website rate limits and anti-bot measures
-- Some job portals may require authentication or have restrictions
-- Results depend on availability of similar job postings online
+## 🤝 Contributing
 
-## License
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
 
-MIT License
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- Singapore Department of Statistics for SSIC 2025 and SSO 2024 standards
+- OpenAI for GPT-4o-mini API
+- Streamlit for the amazing framework
+
+## 📞 Support
+
+For questions or support:
+- Create an issue on GitHub
+- Email: LGLLiang22.13@gmail.com
+
+---
+
+**Built with ❤️ using Streamlit | Powered by OpenAI**
