@@ -279,43 +279,32 @@ def main():
     st.markdown('<h1 class="main-header">Job Description Generator</h1>', unsafe_allow_html=True)
     st.markdown("Generate concise job descriptions with SSIC & SSO classification codes using AI and web-scraped data")
     
-    # Sidebar - Configuration
+    # Automatically set API key from backend (no user configuration needed)
+    api_key = None
+    
+    # Try Streamlit secrets first (for cloud deployment)
+    try:
+        api_key = st.secrets.get("openai", {}).get("api_key", "")
+    except:
+        pass
+    
+    if not api_key:
+        # Try environment variable
+        api_key = os.getenv('OPENAI_API_KEY', "")
+    
+    if not api_key:
+        # Use backend config file (for local/development)
+        try:
+            from config import DEFAULT_OPENAI_API_KEY
+            api_key = DEFAULT_OPENAI_API_KEY
+        except ImportError:
+            st.error("🔧 API configuration required. Please contact administrator.")
+            st.stop()
+    
+    # Sidebar - Options (no API key configuration needed)
     with st.sidebar:
-        st.header("⚙️ Configuration")
+        st.header("⚙️ Options")
         
-        # API Key input with multiple fallback options
-        api_key = st.text_input(
-            "OpenAI API Key (Optional)",
-            type="password",
-            value="",  # Start empty to show fallback system working
-            help="Enter your OpenAI API key or leave empty to use system default"
-        )
-        
-        # Multi-tier fallback system for API key
-        if not api_key:
-            # Try Streamlit secrets first
-            api_key = st.secrets.get("openai", {}).get("api_key", "")
-            
-            if not api_key:
-                # Try environment variable
-                api_key = os.getenv('OPENAI_API_KEY', "")
-            
-            if not api_key:
-                # Try config file
-                try:
-                    from config import DEFAULT_OPENAI_API_KEY
-                    api_key = DEFAULT_OPENAI_API_KEY
-                    st.info("🔑 Using system default API key")
-                except ImportError:
-                    st.error("❌ No API key found. Please enter your OpenAI API key.")
-                    st.stop()
-            else:
-                st.info("🔑 Using configured API key")
-        else:
-            st.success("✅ Using your provided API key")
-        
-        # Options
-        st.divider()
         use_web_search = st.checkbox(
             "🔍 Enable Web Search",
             value=True,

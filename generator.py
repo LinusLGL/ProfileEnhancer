@@ -23,13 +23,13 @@ class JobDescriptionGenerator:
         """Initialize the generator with OpenAI API key."""
         self.api_key = api_key or os.getenv('OPENAI_API_KEY')
         
-        # Fallback to default key if available
+        # Fallback to config file (for local development)
         if not self.api_key:
             try:
                 from config import DEFAULT_OPENAI_API_KEY
                 self.api_key = DEFAULT_OPENAI_API_KEY
             except ImportError:
-                raise ValueError("OpenAI API key is required. Set OPENAI_API_KEY in .env file or pass it directly.")
+                raise ValueError("API configuration required. Please ensure API key is properly configured.")
         
         self.client = OpenAI(api_key=self.api_key)
         
