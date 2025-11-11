@@ -4,6 +4,9 @@
 # Configuration with sensitive data
 config.py
 
+# Streamlit local secrets (but allow templates)
+.streamlit/secrets.toml
+
 # Python
 __pycache__/
 *.py[cod]
@@ -50,6 +53,3 @@ Thumbs.db
 !sample_input.xlsx
 !ssic2025-classification-structure.xlsx
 !ssoc2024-classification-structure.xlsx
-
-# Streamlit
-.streamlit/secrets.toml

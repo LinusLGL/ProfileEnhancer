@@ -23,13 +23,26 @@ class JobDescriptionGenerator:
         """Initialize the generator with OpenAI API key."""
         self.api_key = api_key or os.getenv('OPENAI_API_KEY')
         
-        # Fallback to config file (for local development)
+        # Enhanced fallback system for multiple deployment scenarios
         if not self.api_key:
             try:
+                # Try config.py first
                 from config import DEFAULT_OPENAI_API_KEY
                 self.api_key = DEFAULT_OPENAI_API_KEY
             except ImportError:
-                raise ValueError("API configuration required. Please ensure API key is properly configured.")
+                try:
+                    # Fallback to config template for Streamlit Cloud
+                    import importlib.util
+                    import os
+                    if os.path.exists('config.template.py'):
+                        spec = importlib.util.spec_from_file_location("config_template", "config.template.py")
+                        config_template = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(config_template)
+                        self.api_key = config_template.DEFAULT_OPENAI_API_KEY
+                    else:
+                        raise ValueError("OpenAI API key is required. Set OPENAI_API_KEY in .env file or pass it directly.")
+                except Exception:
+                    raise ValueError("OpenAI API key is required. Set OPENAI_API_KEY in .env file or pass it directly.")
         
         self.client = OpenAI(api_key=self.api_key)
         

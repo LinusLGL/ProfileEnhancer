@@ -279,40 +279,51 @@ def main():
     st.markdown('<h1 class="main-header">Job Description Generator</h1>', unsafe_allow_html=True)
     st.markdown("Generate concise job descriptions with SSIC & SSO classification codes using AI and web-scraped data")
     
-    # Automatically set API key from backend (no user configuration needed)
-    api_key = None
-    
-    # Try Streamlit secrets first (for cloud deployment)
-    try:
-        api_key = st.secrets.get("openai", {}).get("api_key", "")
-    except:
-        pass
-    
-    if not api_key:
-        # Try environment variable
-        api_key = os.getenv('OPENAI_API_KEY', "")
-    
-    if not api_key:
-        # Use backend config file (for local/development)
-        try:
-            from config import DEFAULT_OPENAI_API_KEY
-            api_key = DEFAULT_OPENAI_API_KEY
-        except ImportError:
-            st.error("🔧 Please add your OpenAI API key to Streamlit Community Cloud secrets:")
-            st.code("""[openai]
-api_key = "your_openai_api_key_here"
-            """, language="toml")
-            st.info("📍 **Instructions:**")
-            st.info("1. Go to your app settings → Secrets")
-            st.info("2. Add the configuration above") 
-            st.info("3. Replace 'your_openai_api_key_here' with your actual API key")
-            st.info("4. Save and reboot the app")
-            st.stop()
-    
-    # Sidebar - Options (no API key configuration needed)
+    # Sidebar - Configuration
     with st.sidebar:
-        st.header("⚙️ Options")
+        st.header("⚙️ Configuration")
         
+        # API Key input with multiple fallback options
+        api_key = st.text_input(
+            "OpenAI API Key (Optional)",
+            type="password",
+            value=st.secrets.get("openai", {}).get("api_key", os.getenv('OPENAI_API_KEY', '')),
+            help="Enter your OpenAI API key or leave empty to use system default"
+        )
+        
+        # Multiple fallback options for API key
+        if not api_key:
+            try:
+                # Try config.py first
+                from config import DEFAULT_OPENAI_API_KEY
+                api_key = DEFAULT_OPENAI_API_KEY
+                st.info("🔑 Using system default API key")
+            except ImportError:
+                try:
+                    # Fallback to config template for Streamlit Cloud
+                    from config import DEFAULT_OPENAI_API_KEY as template_key
+                    api_key = template_key
+                    st.info("🔑 Using system configuration")
+                except ImportError:
+                    try:
+                        # Last resort: check if config.template exists and rename
+                        import os
+                        if os.path.exists('config.template.py'):
+                            import importlib.util
+                            spec = importlib.util.spec_from_file_location("config_template", "config.template.py")
+                            config_template = importlib.util.module_from_spec(spec)
+                            spec.loader.exec_module(config_template)
+                            api_key = config_template.DEFAULT_OPENAI_API_KEY
+                            st.info("🔑 Using template configuration")
+                        else:
+                            st.warning("⚠️ No API key configured. Please enter your OpenAI API key.")
+                            st.stop()
+                    except Exception:
+                        st.warning("⚠️ No API key configured. Please enter your OpenAI API key.")
+                        st.stop()
+        
+        # Options
+        st.divider()
         use_web_search = st.checkbox(
             "🔍 Enable Web Search",
             value=True,
