@@ -17,6 +17,14 @@ from generator import JobDescriptionGenerator
 # Load environment variables
 load_dotenv()
 
+# Cloud deployment compatibility check
+try:
+    test_scraper = JobPortalScraper()
+    WEB_SCRAPING_AVAILABLE = True
+except Exception as e:
+    WEB_SCRAPING_AVAILABLE = False
+    st.warning("⚠️ Web scraping features are limited in cloud deployment. AI generation will work without web data.")
+
 # Page configuration
 st.set_page_config(
     page_title="Job Description Generator",
