@@ -292,38 +292,51 @@ def main():
     with st.sidebar:
         st.header("⚙️ Configuration")
         
-        # API Key input with simplified fallback system
-        api_key = st.text_input(
-            "OpenAI API Key (Optional)",
-            type="password",
-            value=st.secrets.get("openai", {}).get("api_key", os.getenv('OPENAI_API_KEY', '')),
-            help="Enter your OpenAI API key or leave empty to use system default"
-        )
+        # Automatically get API key from Streamlit secrets (no user input needed)
+        api_key = None
         
-        # Simplified fallback for API key
+        # Try Streamlit secrets first (primary method for cloud deployment)
+        try:
+            if "openai" in st.secrets and st.secrets["openai"].get("api_key"):
+                api_key = st.secrets["openai"]["api_key"]
+                if api_key and api_key != "your_openai_api_key_here":
+                    st.success("✅ API Key: Configured from Streamlit Secrets")
+        except Exception:
+            pass
+        
+        # Fallback to environment variable
         if not api_key:
-            # Try Streamlit secrets first
-            api_key = st.secrets.get("openai", {}).get("api_key", "")
-            
-            if not api_key:
-                # Try environment variable
-                api_key = os.getenv('OPENAI_API_KEY', '')
-                
-            if not api_key:
-                # Try local config file
-                try:
-                    from config import DEFAULT_OPENAI_API_KEY
-                    api_key = DEFAULT_OPENAI_API_KEY
-                    st.info("🔑 Using system default API key")
-                except ImportError:
-                    # Final fallback - show warning
-                    st.warning("⚠️ No API key configured. Please enter your OpenAI API key in the input field above or configure it in app secrets.")
-                    st.stop()
+            api_key = os.getenv('OPENAI_API_KEY', '')
+            if api_key:
+                st.success("✅ API Key: Configured from Environment")
         
-        # Validate API key format
-        if api_key and not api_key.startswith(('sk-', 'your_')):
-            if len(api_key) > 10:  # Only show info if we have a real key
-                st.success("🔑 API key configured successfully")
+        # Fallback to local config file
+        if not api_key:
+            try:
+                from config import DEFAULT_OPENAI_API_KEY
+                if DEFAULT_OPENAI_API_KEY and DEFAULT_OPENAI_API_KEY != "your_backend_api_key_here":
+                    api_key = DEFAULT_OPENAI_API_KEY
+                    st.success("✅ API Key: Configured from Local Config")
+            except ImportError:
+                pass
+        
+        # Show error if no API key found
+        if not api_key:
+            st.error("❌ API Key: Not Configured")
+            st.warning("⚠️ No OpenAI API key found. Please configure it in Streamlit Secrets.")
+            st.info("""
+            **To configure:**
+            1. Go to App Settings → Secrets
+            2. Add:
+            ```toml
+            [openai]
+            api_key = "your_openai_api_key_here"
+            ```
+            3. Reboot the app
+            
+            📧 Contact: LGLLiang22.13@gmail.com
+            """)
+            st.stop()
         
         # Options
         st.divider()
