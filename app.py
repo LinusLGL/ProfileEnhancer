@@ -399,8 +399,16 @@ def main():
         st.divider()
         
         # About Us button
-        if st.button("ℹ️ About Us", use_container_width=True):
-            st.session_state.show_about = not st.session_state.get('show_about', False)
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("ℹ️ About Us", use_container_width=True):
+                st.session_state.show_about = not st.session_state.get('show_about', False)
+                st.session_state.show_methodology = False  # Close methodology when opening about
+        
+        with col2:
+            if st.button("📚 Methodology", use_container_width=True):
+                st.session_state.show_methodology = not st.session_state.get('show_methodology', False)
+                st.session_state.show_about = False  # Close about when opening methodology
         
         if st.session_state.get('show_about', False):
             st.markdown("### About Us")
@@ -420,14 +428,94 @@ def main():
             - Exportable, standardised descriptions for reporting
             """)
         
-        st.markdown("### Tips")
-        st.markdown("""
-        - Provide as much detail as possible
-        - AI analyzes company for precise industry classification
-        - Web search improves results
-        - Output includes Singapore classification codes
-        - Excel file should have 'Company' and 'Job Title' columns
-        """)
+        if st.session_state.get('show_methodology', False):
+            st.markdown("### 📚 Methodology")
+            
+            st.markdown("#### 🚀 Quick Start")
+            st.markdown("""
+            1. **Single Entry**: Enter company name and job title → Enable web search → Generate
+            2. **Batch Processing**: Upload Excel with 'Company' and 'Job Title' columns → Process
+            3. **Download**: Get results as text file (single) or Excel (batch)
+            """)
+            
+            st.markdown("#### 📁 Project Structure")
+            st.code("""
+job-description-generator/
+├── app.py              # Main Streamlit application
+├── classifier.py       # SSIC/SSOC classification
+├── scraper.py         # Web scraping module
+├── generator.py       # AI generation engine
+├── utils.py           # Utility functions
+└── requirements.txt   # Dependencies
+            """, language="text")
+            
+            st.markdown("#### 🎯 How to Use")
+            st.markdown("""
+            **Single Job Description:**
+            1. Enter company name and job title
+            2. Optionally add initial description
+            3. Enable web search for better context
+            4. Click "Generate Job Description"
+            5. Review and download results
+            
+            **Batch Processing:**
+            1. Prepare Excel with columns: Company, Job Title, Job Description (optional)
+            2. Upload file in Batch Processing tab
+            3. Click "Process All Jobs"
+            4. Download enhanced Excel with 4 new columns:
+               - 📄 Generated Job Description
+               - Company Analysis
+               - SSIC 5 digit
+               - SSOC 5 digit
+            """)
+            
+            st.markdown("#### 💡 Usage Tips")
+            st.markdown("""
+            - **Web Search**: Searches Indeed, JobStreet, MyCareersFuture for similar roles
+            - **AI Analysis**: Company analysis determines accurate SSIC code
+            - **Classification**: 5-digit SSIC 2025 (1,694 codes) + SSO 2024 (1,617 codes)
+            - **Compatibility**: System validates SSIC-SSO pairings automatically
+            - **Cost**: ~$0.01-$0.03 per job using GPT-4o-mini
+            - **Processing**: ~10-15 seconds per job with web search
+            """)
+            
+            st.markdown("#### 📊 Expected Results")
+            st.markdown("""
+            **Single Job Output:**
+            - Job Overview/Summary (2-3 sentences)
+            - Key Responsibilities (5-8 bullet points)
+            - Company Analysis for SSIC
+            - SSIC 5-digit code with description
+            - SSOC 5-digit code with description
+            
+            **Batch Output:**
+            - Original data preserved
+            - 4 new columns added
+            - Success/failure status for each row
+            - Downloadable Excel file
+            """)
+            
+            st.markdown("#### 🔧 Technical Details")
+            st.markdown("""
+            - **AI Model**: OpenAI GPT-4o-mini
+            - **Web Scraping**: Requests + BeautifulSoup (cloud-compatible)
+            - **Classification**: SSIC 2025 + SSO 2024 standards
+            - **API Key**: Auto-detected from Streamlit secrets
+            - **Security**: Password protected (MRSDMOM22)
+            """)
+            
+        st.divider()
+        
+        # Information (only show when methodology/about are closed)
+        if not st.session_state.get('show_about', False) and not st.session_state.get('show_methodology', False):
+            st.markdown("### 💡 Quick Tips")
+            st.markdown("""
+            - Provide detailed company and job title
+            - Enable web search for better accuracy
+            - Batch process up to 100 jobs
+            - Download results as text or Excel
+            - Review generated content before use
+            """)
     
     # Main content - Tabs
     tab1, tab2 = st.tabs(["Single Entry", "Batch Processing (Excel)"])
