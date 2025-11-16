@@ -398,17 +398,27 @@ def main():
         
         st.divider()
         
-        # Information
-        st.markdown("### About")
-        st.markdown("""
-        This tool generates concise job descriptions with:
-        - Job Overview/Summary (2-3 sentences)  
-        - Key Responsibilities (5-8 bullet points)
-        - AI-Generated Company Analysis for accurate SSIC classification
-        - SSIC 2025 & SSO 2024 Classification Codes
-        - Web search for better context (optional)
-        - Batch processing for multiple jobs
-        """)
+        # About Us button
+        if st.button("ℹ️ About Us", use_container_width=True):
+            st.session_state.show_about = not st.session_state.get('show_about', False)
+        
+        if st.session_state.get('show_about', False):
+            st.markdown("### About Us")
+            st.markdown("""
+            We build AI-powered tools that transform vague job and business descriptions into accurate SSOC and SSIC classifications, helping organisations in Singapore stay compliant, efficient, and data-driven.
+            
+            **Project Scope**  
+            Design, develop, and pilot an end-to-end LLM-based SSOC/SSIC assistant that expands short descriptions, proposes top code recommendations with explanations, and integrates into HR/registration workflows.
+            
+            **Objective**  
+            To improve the accuracy, speed, and consistency of SSOC/SSIC classification, reducing misclassification risk in licensing, reporting, and grants while easing the workload of HR and corporate services teams.
+            
+            **Features**
+            - LLM-powered expansion of short or vague job titles and business activities
+            - Automated SSOC + SSIC code recommendations with confidence levels
+            - Search and lookup interface for codebooks with smart filtering
+            - Exportable, standardised descriptions for reporting
+            """)
         
         st.markdown("### Tips")
         st.markdown("""
