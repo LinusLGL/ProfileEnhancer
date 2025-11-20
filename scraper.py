@@ -360,9 +360,21 @@ class JobPortalScraper:
         try:
             logger.info(f"Searching LinkedIn for: {job_title} at {company}")
             
-            # Build search query
-            search_query = f"{job_title} {company}".strip().replace(' ', '%20')
+            # Expand company name abbreviations for better search results
+            company_expanded = company
+            company_lower = company.lower()
+            if 'mindef' in company_lower or company_lower == 'mod':
+                company_expanded = "Ministry of Defence Singapore"
+            elif 'moe' in company_lower:
+                company_expanded = "Ministry of Education Singapore"
+            elif 'moh' in company_lower:
+                company_expanded = "Ministry of Health Singapore"
+            
+            # Build search query with expanded company name
+            search_query = f"{job_title} {company_expanded}".strip().replace(' ', '%20')
             search_url = f"https://www.linkedin.com/jobs/search?keywords={search_query}&location=Singapore"
+            
+            logger.info(f"LinkedIn search URL: {search_url}")
             
             # Add headers to mimic browser
             headers = {

@@ -631,15 +631,21 @@ Job Description: {job_description[:400]}...
 
 Generate a concise 2-3 sentence company description that includes:
 
-1. PRIMARY INDUSTRY SECTOR (e.g., Technology, Financial Services, Manufacturing, Retail, Healthcare, Education, Construction, etc.)
-2. CORE BUSINESS ACTIVITIES (e.g., software development, banking services, manufacturing of electronics, retail sales, consulting services)  
-3. PRIMARY BUSINESS MODEL (e.g., B2B services, B2C products, consulting, platform, manufacturing, etc.)
+1. PRIMARY INDUSTRY SECTOR (e.g., Technology, Financial Services, Defence/Armed Forces, Public Administration, Manufacturing, Retail, Healthcare, Education, etc.)
+2. CORE BUSINESS ACTIVITIES (e.g., military defence operations, software development, banking services, government services, etc.)
+3. PRIMARY BUSINESS MODEL (e.g., government agency, armed forces, B2B services, B2C products, etc.)
 
 Focus on industry classification keywords. Avoid job-specific details.
+
+IMPORTANT: For defence/military organizations:
+- Ministry of Defence / Mindef → Clearly state "armed forces" and "military operations"
+- SAF / Army / Navy / Air Force → Emphasize "armed forces" and "defence"
+- Defence agencies → Focus on "military" or "armed forces" activities
 
 Examples:
 - "Google is a technology company specializing in software development, cloud computing services, and digital advertising platforms. The company provides internet-related services including search engines, online advertising technologies, and cloud computing solutions primarily to businesses and consumers globally."
 - "DBS Bank is a financial services institution providing comprehensive banking and financial services. The company offers retail banking, corporate banking, investment banking, and wealth management services to individuals, businesses, and institutional clients."
+- "Ministry of Defence of Singapore is a government agency operating Singapore's armed forces and military operations. The ministry is responsible for national defence, military training, defence policy, and armed forces management including defence heritage and museums."
 
 Company Description for SSIC Classification:"""
 
@@ -665,7 +671,14 @@ Company Description for SSIC Classification:"""
         except Exception as e:
             logger.warning(f"Failed to generate company description: {str(e)}")
             # Fallback to basic industry description based on company name
-            return f"{company_name} is a company operating in the business sector related to its core activities and services."
+            # Check for known defence/military organizations
+            company_lower = company_name.lower()
+            if 'mindef' in company_lower or 'ministry of defence' in company_lower or 'mod' in company_lower:
+                return f"{company_name} is a government agency operating Singapore's armed forces and military operations responsible for national defence."
+            elif 'saf' in company_lower or 'army' in company_lower or 'navy' in company_lower or 'air force' in company_lower:
+                return f"{company_name} is part of Singapore's armed forces responsible for military operations and national defence."
+            else:
+                return f"{company_name} is a company operating in the business sector related to its core activities and services."
     
     def _ai_enhanced_ssic_classification(self, company: str, company_description: str, 
                                        sso_code: str, sso_title: str, 
@@ -685,6 +698,15 @@ Company Description for SSIC Classification:"""
             Tuple of (ssic_code, ssic_title, confidence_score)
         """
         try:
+            # Direct override for known defence/military organizations
+            company_lower = company.lower()
+            if 'mindef' in company_lower or 'ministry of defence' in company_lower or 'mod' in company_lower:
+                logger.info(f"Direct SSIC override for Ministry of Defence: 84221 (Armed forces)")
+                return ("84221", "Armed forces", 0.95)
+            elif 'saf' in company_lower or ('singapore' in company_lower and 'armed forces' in company_lower):
+                logger.info(f"Direct SSIC override for SAF: 84221 (Armed forces)")
+                return ("84221", "Armed forces", 0.95)
+            
             client = OpenAI(api_key=api_key)
             
             # Get top candidate SSIC codes using company analysis
@@ -715,19 +737,27 @@ Top 5-digit SSIC candidates:
 {candidates_text}
 
 Key Guidelines:
-1. Technology companies (software, IT): Use 62011 (Software development) or 62021 (IT consultancy)
-2. Banks/Financial institutions: Use 641xx, 642xx, 649xx codes  
-3. Government agencies: Use appropriate 841xx codes
-4. Healthcare organizations: Use 861xx codes
-5. Manufacturing companies: Use specific 1xxxx-3xxxx codes
-6. Retail companies: Use 47xxx codes only if they sell directly to consumers
-7. Consulting firms: Use 70xxx or 62021 codes
+1. Defence/Military (Ministry of Defence, Armed Forces, Military): Use 84221 (Armed forces) - NOT 84220 (Defence)
+2. General Government/Public Administration: Use 84110 (General public administration activities)
+3. Technology companies (software, IT): Use 62011 (Software development) or 62021 (IT consultancy)
+4. Banks/Financial institutions: Use 641xx, 642xx, 649xx codes  
+5. Healthcare organizations: Use 861xx codes
+6. Manufacturing companies: Use specific 1xxxx-3xxxx codes
+7. Retail companies: Use 47xxx codes only if they sell directly to consumers
+8. Consulting firms: Use 70xxx codes
+
+CRITICAL DEFENCE CLASSIFICATION:
+- Ministry of Defence / Mindef → 84221 (Armed forces)
+- Armed Forces / Military → 84221 (Armed forces)
+- SAF / Army / Navy / Air Force → 84221 (Armed forces)
+- Defence-related museums / heritage → 84221 (Armed forces) if under MoD
 
 Compatibility Check:
 - Software Developer (SSO 25121) → Technology company (SSIC 62011)
 - Financial Analyst (SSO 24131) → Financial services (SSIC 641xx) 
 - Management Consultant (SSO 24211) → Consulting firm (SSIC 70xxx)
-- Government Officer → Government agency (SSIC 841xx)
+- Museum Manager at Ministry of Defence → Armed forces (SSIC 84221)
+- Government Officer (general) → Public administration (SSIC 84110)
 
 Respond with ONLY the 5-digit SSIC code that best matches the company's business activities while being compatible with the occupation.
 
