@@ -655,7 +655,6 @@ Company Description for SSIC Classification:"""
                         "content": prompt
                     }
                 ],
-                temperature=0.3,
                 max_completion_tokens=250
             )
             
@@ -746,7 +745,6 @@ SSIC Code:"""
                         "content": prompt
                     }
                 ],
-                temperature=0.1,
                 max_completion_tokens=50
             )
             
@@ -1007,7 +1005,6 @@ SSO Code:"""
                         "content": prompt
                     }
                 ],
-                temperature=0.1,
                 max_completion_tokens=50
             )
             
@@ -1210,7 +1207,6 @@ Respond with just: GOOD if classifications are appropriate, or suggest better ma
                         "content": prompt
                     }
                 ],
-                temperature=0.3,
                 max_completion_tokens=500
             )
             

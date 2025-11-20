@@ -88,7 +88,6 @@ class JobDescriptionGenerator:
                         "content": prompt
                     }
                 ],
-                temperature=0.7,
                 max_completion_tokens=800
             )
             
@@ -265,7 +264,6 @@ Maintain the core information but enhance the presentation and completeness.
                         "content": prompt
                     }
                 ],
-                temperature=0.7,
                 max_completion_tokens=2000
             )
             
