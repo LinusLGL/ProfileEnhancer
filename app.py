@@ -27,49 +27,6 @@ if os.getenv('STREAMLIT_RUNTIME_ENV') or 'streamlit' in sys.modules:
         initial_sidebar_state="expanded"
     )
 
-# Password protection function
-def check_password():
-    """Returns `True` if the user had the correct password."""
-    
-    def password_entered():
-        """Checks whether a password entered by the user is correct."""
-        if st.session_state["password"] == "MRSDMOM22":
-            st.session_state["password_correct"] = True
-            del st.session_state["password"]  # Don't store password
-        else:
-            st.session_state["password_correct"] = False
-
-    # First run, show password input
-    if "password_correct" not in st.session_state:
-        st.markdown('<h1 class="main-header">🔐 SS-Finder Access</h1>', unsafe_allow_html=True)
-        st.markdown("### Please enter the password to access the application")
-        st.text_input(
-            "Password", 
-            type="password", 
-            on_change=password_entered, 
-            key="password",
-            placeholder="Enter access password"
-        )
-        st.info("📧 For access, please contact: LGLLiang22.13@gmail.com")
-        return False
-    # Password correct
-    elif st.session_state["password_correct"]:
-        return True
-    # Password incorrect
-    else:
-        st.markdown('<h1 class="main-header">🔐 SS-Finder Access</h1>', unsafe_allow_html=True)
-        st.markdown("### Please enter the password to access the application")
-        st.text_input(
-            "Password", 
-            type="password", 
-            on_change=password_entered, 
-            key="password",
-            placeholder="Enter access password"
-        )
-        st.error("❌ Incorrect password. Please try again.")
-        st.info("📧 For access, please contact: LGLLiang22.13@gmail.com")
-        return False
-
 # Custom CSS
 st.markdown("""
 <style>
@@ -320,10 +277,6 @@ def parse_generated_description(generated_desc: str) -> tuple:
 def main():
     """Main application function."""
     
-    # Check password first
-    if not check_password():
-        st.stop()
-    
     initialize_session_state()
     
     # Debug mode for troubleshooting
@@ -511,7 +464,7 @@ job-description-generator/
             - **Web Scraping**: Requests + BeautifulSoup (cloud-compatible)
             - **Classification**: SSIC 2025 + SSO 2024 standards
             - **API Key**: Auto-detected from Streamlit secrets
-            - **Security**: Password protected (MRSDMOM22)
+            - **Security**: Open access - no password required
             """)
             
         st.divider()
