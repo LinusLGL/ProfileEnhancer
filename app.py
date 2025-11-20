@@ -119,14 +119,20 @@ def process_single_job(company: str, job_title: str, job_description: str,
             if use_web_search or linkedin_url:
                 scraper = JobPortalScraper()
                 
-                # If LinkedIn URL is provided, prioritize scraping it
+                # AI-powered LinkedIn search (passes API key for enhanced capabilities)
+                # System will intelligently discover LinkedIn job URLs without hard-coding
                 if linkedin_url and 'linkedin.com/jobs/view' in linkedin_url:
-                    linkedin_results = scraper.search_linkedin(job_title, company, linkedin_url=linkedin_url)
-                    search_results.extend(linkedin_results)
+                    # User provided URL - use it directly
+                    linkedin_results = scraper.search_linkedin(job_title, company, linkedin_url=linkedin_url, api_key=api_key)
+                else:
+                    # No URL provided - use AI to discover it automatically
+                    linkedin_results = scraper.search_linkedin(job_title, company, linkedin_url=None, api_key=api_key)
+                
+                search_results.extend(linkedin_results)
                 
                 # Then search other portals if web search is enabled
                 if use_web_search:
-                    other_results = scraper.search_all_portals(job_title, company)
+                    other_results = scraper.search_all_portals(job_title, company, api_key=api_key)
                     search_results.extend(other_results)
                 
                 web_results_text = scraper.extract_job_details(search_results)

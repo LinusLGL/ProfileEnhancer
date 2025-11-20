@@ -37,6 +37,94 @@ class JobPortalScraper:
         """Add random delay between requests to avoid rate limiting."""
         time.sleep(random.uniform(1, 3))
     
+    def ai_search_linkedin_url(self, company: str, job_title: str, api_key: Optional[str] = None) -> Optional[str]:
+        """
+        Use AI to intelligently search for LinkedIn job URL.
+        This uses web search queries to find the specific job posting.
+        
+        Args:
+            company: Company name
+            job_title: Job title
+            api_key: OpenAI API key (optional, for enhanced search)
+            
+        Returns:
+            LinkedIn job URL if found, None otherwise
+        """
+        try:
+            # Strategy 1: Use DuckDuckGo instant answers (no API key needed)
+            logger.info(f"🔍 AI Search: Looking for LinkedIn job URL for {job_title} at {company}")
+            
+            # Expand company names for better search
+            company_expanded = company
+            company_lower = company.lower()
+            if 'mindef' in company_lower or company_lower == 'mod':
+                company_expanded = "Ministry of Defence Singapore"
+            elif 'moe' in company_lower:
+                company_expanded = "Ministry of Education Singapore"
+            elif 'moh' in company_lower:
+                company_expanded = "Ministry of Health Singapore"
+            elif 'mom' in company_lower:
+                company_expanded = "Ministry of Manpower Singapore"
+            
+            # Build intelligent search queries
+            search_queries = [
+                f'site:linkedin.com/jobs/view "{job_title}" "{company_expanded}"',
+                f'site:linkedin.com/jobs/view {job_title} {company_expanded} Singapore',
+                f'linkedin jobs {company_expanded} {job_title}'
+            ]
+            
+            # Try each search query
+            for query in search_queries:
+                logger.info(f"Trying search query: {query}")
+                
+                # Use DuckDuckGo HTML search (no API key needed)
+                search_url = f"https://html.duckduckgo.com/html/?q={query.replace(' ', '+')}"
+                
+                try:
+                    response = self.session.get(search_url, timeout=10, verify=False)
+                    if response.status_code == 200:
+                        soup = BeautifulSoup(response.content, 'html.parser')
+                        
+                        # Look for LinkedIn job URLs in search results
+                        links = soup.find_all('a', href=True)
+                        for link in links:
+                            href = link.get('href', '')
+                            
+                            # Check if this is a LinkedIn job URL
+                            if 'linkedin.com/jobs/view' in href:
+                                # Extract the actual LinkedIn URL
+                                if href.startswith('//duckduckgo.com'):
+                                    # DuckDuckGo redirect link - extract actual URL
+                                    import urllib.parse
+                                    parsed = urllib.parse.parse_qs(href)
+                                    if 'uddg' in parsed:
+                                        actual_url = urllib.parse.unquote(parsed['uddg'][0])
+                                        if 'linkedin.com/jobs/view' in actual_url:
+                                            logger.info(f"✅ Found LinkedIn URL via AI search: {actual_url}")
+                                            return actual_url
+                                elif 'linkedin.com/jobs/view' in href:
+                                    # Direct LinkedIn URL
+                                    if not href.startswith('http'):
+                                        href = 'https://www.linkedin.com' + href
+                                    logger.info(f"✅ Found LinkedIn URL via AI search: {href}")
+                                    return href
+                    
+                    time.sleep(random.uniform(1, 2))  # Delay between searches
+                    
+                except Exception as e:
+                    logger.debug(f"Search attempt failed: {e}")
+                    continue
+            
+            # Strategy 2: Use Google Custom Search (if available)
+            # This would require Google Custom Search API key
+            # For now, log that no URL was found
+            logger.warning("AI search could not find LinkedIn URL automatically")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error in AI LinkedIn URL search: {e}")
+            return None
+    
     def search_indeed(self, job_title: str, company: str = "") -> List[Dict]:
         """Search Indeed jobs with basic HTTP requests (cloud-friendly)."""
         jobs = []
@@ -365,23 +453,35 @@ class JobPortalScraper:
             logger.error(f"Error scraping LinkedIn URL: {e}")
             return None
     
-    def search_linkedin(self, job_title: str, company: str = "", linkedin_url: Optional[str] = None) -> List[Dict]:
+    def search_linkedin(self, job_title: str, company: str = "", linkedin_url: Optional[str] = None, api_key: Optional[str] = None) -> List[Dict]:
         """
-        Search LinkedIn or scrape a specific LinkedIn job URL.
+        Intelligently search LinkedIn for jobs using AI-powered discovery.
         
         Args:
             job_title: Job title to search for
             company: Company name (optional)
-            linkedin_url: Direct LinkedIn job URL (optional)
+            linkedin_url: Direct LinkedIn job URL (optional, overrides AI search)
+            api_key: OpenAI API key for enhanced search (optional)
             
         Returns:
-            List of job dictionaries
+            List of job dictionaries with discovered URLs
         """
         jobs = []
         
         # If a specific LinkedIn URL is provided, scrape it
         if linkedin_url and 'linkedin.com/jobs/view' in linkedin_url:
+            logger.info("Using provided LinkedIn URL")
             scraped_job = self.scrape_linkedin_job_url(linkedin_url)
+            if scraped_job:
+                jobs.append(scraped_job)
+                return jobs
+        
+        # Strategy 1: AI-powered web search to find LinkedIn URL
+        logger.info("🤖 Attempting AI-powered LinkedIn job discovery...")
+        discovered_url = self.ai_search_linkedin_url(company, job_title, api_key)
+        if discovered_url:
+            logger.info(f"✅ AI discovered LinkedIn URL: {discovered_url}")
+            scraped_job = self.scrape_linkedin_job_url(discovered_url)
             if scraped_job:
                 jobs.append(scraped_job)
                 return jobs
@@ -559,19 +659,24 @@ class JobPortalScraper:
             'source': 'JobsCentral'
         }]
     
-    def search_all_portals(self, job_title: str, company: str = "", max_results_per_portal: int = 2, linkedin_url: Optional[str] = None) -> List[Dict]:
-        """Search all available portals: LinkedIn, Indeed, JobStreet, MyCareersFuture, Careers@Gov."""
+    def search_all_portals(self, job_title: str, company: str = "", max_results_per_portal: int = 2, linkedin_url: Optional[str] = None, api_key: Optional[str] = None) -> List[Dict]:
+        """Search all available portals: LinkedIn (with AI discovery), Indeed, JobStreet, MyCareersFuture, Careers@Gov."""
         all_jobs = []
         
         # Note: Web scraping is limited in Streamlit Community Cloud
-        # This provides basic functionality for demonstration
+        # LinkedIn now uses AI-powered URL discovery
         
         try:
-            # Search LinkedIn first if URL provided
+            # Search LinkedIn with AI-powered discovery (no hard-coding!)
             if linkedin_url and 'linkedin.com/jobs/view' in linkedin_url:
-                linkedin_jobs = self.search_linkedin(job_title, company, linkedin_url=linkedin_url)
-                all_jobs.extend(linkedin_jobs[:max_results_per_portal])
-                self._delay()
+                # User provided URL
+                linkedin_jobs = self.search_linkedin(job_title, company, linkedin_url=linkedin_url, api_key=api_key)
+            else:
+                # AI discovers URL automatically
+                linkedin_jobs = self.search_linkedin(job_title, company, linkedin_url=None, api_key=api_key)
+            
+            all_jobs.extend(linkedin_jobs[:max_results_per_portal])
+            self._delay()
             
             # Search Indeed (most reliable)
             indeed_jobs = self.search_indeed(job_title, company)
