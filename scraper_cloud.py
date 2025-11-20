@@ -29,6 +29,9 @@ class JobPortalScraper:
             'Upgrade-Insecure-Requests': '1'
         }
         self.session.headers.update(self.headers)
+        # Disable SSL verification warnings (for environments with SSL issues)
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     
     def _delay(self):
         """Add random delay between requests to avoid rate limiting."""
@@ -137,14 +140,242 @@ class JobPortalScraper:
         
         return jobs
     
-    def search_linkedin(self, job_title: str, company: str = "") -> List[Dict]:
-        """LinkedIn search (very limited without authentication)."""
-        return [{
+    def scrape_linkedin_job_url(self, job_url: str) -> Optional[Dict]:
+        """
+        Scrape a specific LinkedIn job posting URL.
+        
+        Args:
+            job_url: Direct LinkedIn job URL (e.g., https://www.linkedin.com/jobs/view/...)
+            
+        Returns:
+            Dictionary with job details or None if scraping fails
+        """
+        try:
+            logger.info(f"Scraping LinkedIn URL: {job_url}")
+            
+            # Clean up the URL - remove parameters that might trigger bot detection
+            if '?' in job_url:
+                base_url = job_url.split('?')[0]
+            else:
+                base_url = job_url
+            
+            # Try multiple approaches to get the content
+            attempts = [
+                {
+                    'url': base_url,
+                    'headers': {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                        'Accept-Language': 'en-US,en;q=0.9',
+                        'Accept-Encoding': 'gzip, deflate, br',
+                        'DNT': '1',
+                        'Connection': 'keep-alive',
+                        'Upgrade-Insecure-Requests': '1',
+                        'Sec-Fetch-Dest': 'document',
+                        'Sec-Fetch-Mode': 'navigate',
+                        'Sec-Fetch-Site': 'none',
+                        'Cache-Control': 'max-age=0'
+                    }
+                },
+                {
+                    'url': job_url,  # Try original URL with params
+                    'headers': {
+                        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Language': 'en-US,en;q=0.5'
+                    }
+                }
+            ]
+            
+            response = None
+            for attempt in attempts:
+                try:
+                    time.sleep(random.uniform(2, 4))  # Random delay between attempts
+                    response = requests.get(
+                        attempt['url'], 
+                        headers=attempt['headers'], 
+                        timeout=20,
+                        verify=False,
+                        allow_redirects=True
+                    )
+                    if response.status_code == 200:
+                        logger.info("Successfully retrieved LinkedIn page")
+                        break
+                    else:
+                        logger.warning(f"Attempt failed with status code: {response.status_code}")
+                except Exception as e:
+                    logger.warning(f"Attempt failed: {str(e)}")
+                    continue
+            
+            if not response or response.status_code != 200:
+                logger.warning(f"All attempts failed to retrieve LinkedIn page")
+                return None
+            
+            # Successfully got the page
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Extract job title
+            job_title = None
+            title_selectors = [
+                ('h1', {'class': 'top-card-layout__title'}),
+                ('h2', {'class': 'topcard__title'}),
+                ('h1', {'class': 'topcard__title'}),
+                ('h1', None)
+            ]
+            
+            for tag, attrs in title_selectors:
+                title_elem = soup.find(tag, attrs) if attrs else soup.find(tag)
+                if title_elem:
+                    job_title = title_elem.get_text(strip=True)
+                    break
+            
+            # Extract company name
+            company_name = None
+            company_selectors = [
+                ('a', {'class': 'topcard__org-name-link'}),
+                ('span', {'class': 'topcard__flavor'}),
+                ('a', {'class': 'sub-nav-cta__optional-url'})
+            ]
+            
+            for tag, attrs in company_selectors:
+                company_elem = soup.find(tag, attrs)
+                if company_elem:
+                    company_name = company_elem.get_text(strip=True)
+                    break
+            
+            # Extract job description
+            description = None
+            desc_selectors = [
+                ('div', {'class': 'show-more-less-html__markup'}),
+                ('div', {'class': 'description__text'}),
+                ('section', {'class': 'description'}),
+                ('div', {'class': 'core-section-container__content'})
+            ]
+            
+            for tag, attrs in desc_selectors:
+                desc_elem = soup.find(tag, attrs)
+                if desc_elem:
+                    # Get text and clean up
+                    description = desc_elem.get_text(separator='\n', strip=True)
+                    # Remove excessive whitespace
+                    description = '\n'.join([line.strip() for line in description.split('\n') if line.strip()])
+                    break
+            
+            # If no structured description found, try to get any visible text
+            if not description:
+                # Look for any div containing substantial text
+                content_divs = soup.find_all('div', {'class': lambda x: x and 'description' in x.lower()})
+                if content_divs:
+                    description = content_divs[0].get_text(separator='\n', strip=True)
+            
+            # Build result
+            if job_title or description:
+                soup = BeautifulSoup(response.content, 'html.parser')
+                
+                # Extract job title
+                job_title = None
+                title_selectors = [
+                    ('h1', {'class': 'top-card-layout__title'}),
+                    ('h2', {'class': 'topcard__title'}),
+                    ('h1', {'class': 'topcard__title'}),
+                    ('h1', None)
+                ]
+                
+                for tag, attrs in title_selectors:
+                    title_elem = soup.find(tag, attrs) if attrs else soup.find(tag)
+                    if title_elem:
+                        job_title = title_elem.get_text(strip=True)
+                        break
+                
+                # Extract company name
+                company_name = None
+                company_selectors = [
+                    ('a', {'class': 'topcard__org-name-link'}),
+                    ('span', {'class': 'topcard__flavor'}),
+                    ('a', {'class': 'sub-nav-cta__optional-url'})
+                ]
+                
+                for tag, attrs in company_selectors:
+                    company_elem = soup.find(tag, attrs)
+                    if company_elem:
+                        company_name = company_elem.get_text(strip=True)
+                        break
+                
+                # Extract job description
+                description = None
+                desc_selectors = [
+                    ('div', {'class': 'show-more-less-html__markup'}),
+                    ('div', {'class': 'description__text'}),
+                    ('section', {'class': 'description'}),
+                    ('div', {'class': 'core-section-container__content'})
+                ]
+                
+                for tag, attrs in desc_selectors:
+                    desc_elem = soup.find(tag, attrs)
+                    if desc_elem:
+                        # Get text and clean up
+                        description = desc_elem.get_text(separator='\n', strip=True)
+                        # Remove excessive whitespace
+                        description = '\n'.join([line.strip() for line in description.split('\n') if line.strip()])
+                        break
+                
+                # If no structured description found, try to get any visible text
+                if not description:
+                    # Look for any div containing substantial text
+                    content_divs = soup.find_all('div', {'class': lambda x: x and 'description' in x.lower()})
+                    if content_divs:
+                        description = content_divs[0].get_text(separator='\n', strip=True)
+                
+                # Build result
+                if job_title or description:
+                    return {
+                        'title': job_title or 'LinkedIn Job',
+                        'company': company_name or 'Company',
+                        'description': description or 'Job description extracted from LinkedIn',
+                        'source': 'LinkedIn',
+                        'url': job_url
+                    }
+                else:
+                    logger.warning("Could not extract job details from LinkedIn page")
+                    return None
+            else:
+                logger.warning(f"LinkedIn request failed with status code: {response.status_code}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error scraping LinkedIn URL: {e}")
+            return None
+    
+    def search_linkedin(self, job_title: str, company: str = "", linkedin_url: Optional[str] = None) -> List[Dict]:
+        """
+        Search LinkedIn or scrape a specific LinkedIn job URL.
+        
+        Args:
+            job_title: Job title to search for
+            company: Company name (optional)
+            linkedin_url: Direct LinkedIn job URL (optional)
+            
+        Returns:
+            List of job dictionaries
+        """
+        jobs = []
+        
+        # If a specific LinkedIn URL is provided, scrape it
+        if linkedin_url and 'linkedin.com/jobs/view' in linkedin_url:
+            scraped_job = self.scrape_linkedin_job_url(linkedin_url)
+            if scraped_job:
+                jobs.append(scraped_job)
+                return jobs
+        
+        # Otherwise, return placeholder (LinkedIn job search requires authentication)
+        jobs.append({
             'title': job_title,
             'company': company or 'Company',
-            'description': f"LinkedIn requires authentication - placeholder data for {job_title}",
+            'description': f"LinkedIn job search requires authentication. To scrape specific jobs, provide a direct LinkedIn job URL.",
             'source': 'LinkedIn (Limited)'
-        }]
+        })
+        
+        return jobs
     
     def search_foundit(self, job_title: str, company: str = "") -> List[Dict]:
         """Foundit search (placeholder)."""
@@ -164,7 +395,7 @@ class JobPortalScraper:
             'source': 'JobsCentral'
         }]
     
-    def search_all_portals(self, job_title: str, company: str = "", max_results_per_portal: int = 2) -> List[Dict]:
+    def search_all_portals(self, job_title: str, company: str = "", max_results_per_portal: int = 2, linkedin_url: Optional[str] = None) -> List[Dict]:
         """Search all available portals with cloud-friendly approach."""
         all_jobs = []
         
@@ -172,6 +403,12 @@ class JobPortalScraper:
         # This provides basic functionality for demonstration
         
         try:
+            # Search LinkedIn first if URL provided
+            if linkedin_url and 'linkedin.com/jobs/view' in linkedin_url:
+                linkedin_jobs = self.search_linkedin(job_title, company, linkedin_url=linkedin_url)
+                all_jobs.extend(linkedin_jobs[:max_results_per_portal])
+                self._delay()
+            
             # Search Indeed (most reliable)
             indeed_jobs = self.search_indeed(job_title, company)
             all_jobs.extend(indeed_jobs[:max_results_per_portal])

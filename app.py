@@ -140,7 +140,7 @@ def display_search_results(results):
 
 
 def process_single_job(company: str, job_title: str, job_description: str, 
-                       use_web_search: bool, api_key: str):
+                       use_web_search: bool, api_key: str, linkedin_url: str = ""):
     """Process a single job description request."""
     
     with st.spinner("🔍 Searching job portals..." if use_web_search else "⏳ Generating job description..."):
@@ -151,10 +151,20 @@ def process_single_job(company: str, job_title: str, job_description: str,
             web_results_text = ""
             search_results = []
             
-            # Web search if enabled
-            if use_web_search:
+            # Web search if enabled or LinkedIn URL provided
+            if use_web_search or linkedin_url:
                 scraper = JobPortalScraper()
-                search_results = scraper.search_all_portals(job_title, company)
+                
+                # If LinkedIn URL is provided, prioritize scraping it
+                if linkedin_url and 'linkedin.com/jobs/view' in linkedin_url:
+                    linkedin_results = scraper.search_linkedin(job_title, company, linkedin_url=linkedin_url)
+                    search_results.extend(linkedin_results)
+                
+                # Then search other portals if web search is enabled
+                if use_web_search:
+                    other_results = scraper.search_all_portals(job_title, company)
+                    search_results.extend(other_results)
+                
                 web_results_text = scraper.extract_job_details(search_results)
                 st.session_state.search_results = search_results
             
@@ -547,6 +557,19 @@ job-description-generator/
             help="Provide any existing description or key points. Leave empty to generate from scratch."
         )
         
+        # LinkedIn URL input
+        linkedin_url = st.text_input(
+            "LinkedIn Job URL (Optional)",
+            placeholder="e.g., https://www.linkedin.com/jobs/view/4341315847/...",
+            help="Paste a direct LinkedIn job posting URL to scrape the job description from LinkedIn"
+        )
+        
+        if linkedin_url:
+            if 'linkedin.com/jobs/view' in linkedin_url:
+                st.success("✅ Valid LinkedIn job URL detected - will scrape job details")
+            else:
+                st.warning("⚠️ Invalid LinkedIn URL format. URL should be like: https://www.linkedin.com/jobs/view/...")
+        
         col1, col2, col3 = st.columns([1, 1, 1])
         with col2:
             generate_button = st.button("🚀 Generate Job Description", type="primary", use_container_width=True)
@@ -555,7 +578,7 @@ job-description-generator/
             if not company or not job_title:
                 st.error("[ERROR] Please provide both Company Name and Job Title")
             else:
-                success = process_single_job(company, job_title, job_description, use_web_search, api_key)
+                success = process_single_job(company, job_title, job_description, use_web_search, api_key, linkedin_url)
                 
                 if success:
                     st.success("[SUCCESS] Job description generated successfully!")
