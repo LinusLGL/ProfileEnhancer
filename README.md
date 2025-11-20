@@ -14,7 +14,7 @@ An AI-powered job description generator with Singapore Standard Industrial Class
 - **🎯 5-Digit SSIC Codes**: Maximum specificity for industry classification  
 - **🔗 SSIC-SSO Compatibility**: Prevents incompatible industry-occupation pairings
 - **📊 Excel Batch Processing**: Upload files and get enhanced output with 4 new columns
-- **🌐 Web Scraping**: Integrates data from Indeed, JobStreet, MyCareersFuture
+- **🌐 Web Scraping**: Integrates data from LinkedIn, Indeed, JobStreet, MyCareersFuture
 - **🇸🇬 Singapore Standards**: SSIC 2025 (1,694 codes) + SSO 2024 (1,617 codes)
 
 ## 📋 How It Works
@@ -22,7 +22,8 @@ An AI-powered job description generator with Singapore Standard Industrial Class
 ### Single Job Processing
 1. Enter company name and job title
 2. Add job description (optional)
-3. Get AI-generated job description with classification codes
+3. Paste LinkedIn job URL (optional) - automatically scrapes job details from LinkedIn
+4. Get AI-generated job description with classification codes
 
 ### Batch Excel Processing
 1. Upload Excel file with columns: `Company`, `Job Title`, `Job Description` (optional)
@@ -91,9 +92,10 @@ python-dotenv>=1.0.0
 - **Confidence Boosting**: Enhanced algorithms with 60-100% accuracy
 
 ### Web Scraping Integration  
-- **Multiple Sources**: Indeed, JobStreet, MyCareersFuture
+- **Multiple Sources**: LinkedIn (direct URL scraping), Indeed, JobStreet, MyCareersFuture
+- **LinkedIn Integration**: Paste any LinkedIn job URL to extract job description automatically
 - **Context Enhancement**: Real job market data improves descriptions
-- **Error Handling**: Robust fallback mechanisms
+- **Error Handling**: Robust fallback mechanisms with multiple retry attempts
 
 ### Excel Batch Processing
 - **Original Data Preserved**: All input columns maintained
