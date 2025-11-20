@@ -112,6 +112,95 @@ class JobPortalScraper:
             logger.debug(f"AI search error: {e}")
             return None
     
+    def _ai_select_best_job_match(self, jobs: List[Dict], target_company: str, company_expanded: str, job_title: str, api_key: str) -> Optional[Dict]:
+        """
+        Use AI to intelligently select the best matching job from search results.
+        
+        Args:
+            jobs: List of scraped job dictionaries
+            target_company: Original company name from user (e.g., "Mindef")
+            company_expanded: Expanded company name (e.g., "Ministry of Defence Singapore")
+            job_title: Job title being searched for
+            api_key: OpenAI API key
+            
+        Returns:
+            Best matching job dictionary or None
+        """
+        try:
+            if not api_key:
+                logger.warning("No API key provided for AI filtering")
+                return jobs[0] if jobs else None
+            
+            # Prepare job summaries for AI analysis
+            job_summaries = []
+            for idx, job in enumerate(jobs):
+                summary = f"Job {idx+1}:\n"
+                summary += f"  Company: {job.get('company', 'Unknown')}\n"
+                summary += f"  Title: {job.get('title', 'Unknown')}\n"
+                summary += f"  Description: {job.get('description', 'No description')[:200]}...\n"
+                job_summaries.append(summary)
+            
+            # AI prompt for intelligent matching
+            prompt = f"""You are an expert job search assistant. Analyze these LinkedIn job search results and select the one that BEST matches the target company.
+
+TARGET SEARCH:
+- Company: {target_company}
+- Full Company Name: {company_expanded}
+- Job Title: {job_title}
+
+SEARCH RESULTS:
+{chr(10).join(job_summaries)}
+
+INSTRUCTIONS:
+1. Identify which job listing is from the target company ({target_company} / {company_expanded})
+2. If no exact match, identify jobs from RELATED organizations (subsidiaries, departments, government agencies)
+3. IMPORTANT: Reject jobs from completely unrelated companies (e.g., LEGO, Netflix when searching for Ministry of Defence)
+4. Consider name variations (Mindef = Ministry of Defence = Singapore Armed Forces)
+
+Respond with ONLY the job number (1, 2, 3, etc.) of the best match.
+If NO jobs match the target company at all, respond with "NONE".
+
+Your response (just the number or NONE):"""
+
+            # Call OpenAI
+            from openai import OpenAI
+            client = OpenAI(api_key=api_key)
+            
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a precise job matching assistant. Return only job numbers or 'NONE'."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_completion_tokens=10,
+                temperature=0
+            )
+            
+            result = response.choices[0].message.content.strip().upper()
+            logger.info(f"AI job selection result: {result}")
+            
+            # Parse AI response
+            if result == "NONE":
+                logger.warning(f"AI determined none of the jobs match {target_company}")
+                return None
+            
+            # Extract job number
+            import re
+            match = re.search(r'\d+', result)
+            if match:
+                job_num = int(match.group()) - 1  # Convert to 0-indexed
+                if 0 <= job_num < len(jobs):
+                    logger.info(f"✅ AI selected job {job_num+1} as best match for {target_company}")
+                    return jobs[job_num]
+            
+            # Fallback: return first job if AI response unclear
+            logger.warning("Could not parse AI response, using first job")
+            return jobs[0]
+            
+        except Exception as e:
+            logger.error(f"AI job filtering error: {e}")
+            return jobs[0] if jobs else None
+    
     def search_indeed(self, job_title: str, company: str = "") -> List[Dict]:
         """Search Indeed jobs with basic HTTP requests (cloud-friendly)."""
         jobs = []
@@ -518,12 +607,34 @@ class JobPortalScraper:
                 if response.status_code == 200:
                     soup = BeautifulSoup(response.content, 'html.parser')
                     
-                    # Look for LinkedIn job links quickly (don't scrape each one)
-                    job_links = soup.find_all('a', href=lambda x: x and '/jobs/view/' in x, limit=3)
+                    # Look for LinkedIn job links quickly - get up to 5 to check
+                    job_links = soup.find_all('a', href=lambda x: x and '/jobs/view/' in x, limit=5)
                     
-                    if job_links:
+                    if job_links and api_key:
+                        logger.info(f"Found {len(job_links)} potential job links - using AI to filter by company")
+                        
+                        # Scrape all found jobs
+                        potential_jobs = []
+                        for link in job_links:
+                            job_url = link['href']
+                            if not job_url.startswith('http'):
+                                job_url = 'https://www.linkedin.com' + job_url
+                            
+                            scraped_job = self.scrape_linkedin_job_url(job_url)
+                            if scraped_job:
+                                potential_jobs.append(scraped_job)
+                        
+                        if potential_jobs:
+                            # Use AI to select the best matching job
+                            logger.info(f"🤖 Using AI to select best match for {company}...")
+                            best_job = self._ai_select_best_job_match(potential_jobs, company, company_expanded, job_title, api_key)
+                            if best_job:
+                                jobs.append(best_job)
+                                return jobs
+                    
+                    elif job_links:
                         logger.info(f"Found {len(job_links)} potential job links")
-                        # Only scrape the first one to save time
+                        # Fallback: just take first one if no API key
                         for link in job_links[:1]:
                             job_url = link['href']
                             if not job_url.startswith('http'):
