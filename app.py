@@ -11,6 +11,7 @@ import os
 import sys
 from datetime import datetime
 from dotenv import load_dotenv
+from typing import List, Dict
 
 from scraper import JobPortalScraper
 from generator import JobDescriptionGenerator
@@ -83,13 +84,19 @@ def validate_api_key(api_key: str) -> bool:
         return False
 
 
-def display_search_results(results):
+def display_web_search_results(results: List[Dict]):
     """Display web search results in an expandable section."""
     if results and len(results) > 0:
         with st.expander(f"📊 View Web Search Results ({len(results)} found)", expanded=False):
             for idx, result in enumerate(results, 1):
                 st.markdown(f"**{idx}. {result['title']}** at *{result['company']}*")
-                st.markdown(f"*Source: {result['source']}*")
+                
+                # Display source with URL if available
+                if 'url' in result and result['url']:
+                    st.markdown(f"*Source: [{result['source']}]({result['url']})*")
+                else:
+                    st.markdown(f"*Source: {result['source']}*")
+                
                 st.text(result['description'])
                 st.divider()
     else:
@@ -543,7 +550,7 @@ job-description-generator/
             
             # Display search results if available
             if use_web_search and st.session_state.search_results:
-                display_search_results(st.session_state.search_results)
+                display_web_search_results(st.session_state.search_results)
             
             # Display generated description
             st.markdown(st.session_state.generated_description)

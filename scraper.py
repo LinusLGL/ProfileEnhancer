@@ -56,13 +56,24 @@ class JobPortalScraper:
                         title_elem = card.find('h2', {'class': 'jobTitle'})
                         company_elem = card.find('span', {'class': 'companyName'})
                         
+                        # Extract job URL
+                        job_url = None
+                        link_elem = title_elem.find('a', href=True) if title_elem else None
+                        if link_elem:
+                            job_id = card.get('data-jk', '')
+                            if job_id:
+                                job_url = f"https://sg.indeed.com/viewjob?jk={job_id}"
+                        
                         if title_elem and company_elem:
-                            jobs.append({
+                            job_data = {
                                 'title': title_elem.get_text(strip=True),
                                 'company': company_elem.get_text(strip=True),
                                 'description': f"Job posting from Indeed for {job_title}",
                                 'source': 'Indeed'
-                            })
+                            }
+                            if job_url:
+                                job_data['url'] = job_url
+                            jobs.append(job_data)
                     except Exception as e:
                         logger.debug(f"Error parsing Indeed job card: {e}")
                         continue
@@ -73,7 +84,8 @@ class JobPortalScraper:
                     'title': job_title,
                     'company': company or 'Company',
                     'description': 'Indeed search results limited in cloud deployment',
-                    'source': 'Indeed (Limited)'
+                    'source': 'Indeed (Limited)',
+                    'url': url  # Include search URL as reference
                 })
                 
         except Exception as e:
@@ -98,12 +110,13 @@ class JobPortalScraper:
             
             response = self.session.get(url, timeout=10)
             if response.status_code == 200:
-                # Add basic job data (actual scraping may be limited)
+                # Add basic job data (actual scraping may be limited) with search URL
                 jobs.append({
                     'title': job_title,
                     'company': company or 'Company',
                     'description': f"JobStreet posting for {job_title} - web scraping limited in cloud",
-                    'source': 'JobStreet'
+                    'source': 'JobStreet',
+                    'url': url  # Include search URL
                 })
         
         except Exception as e:
@@ -121,12 +134,17 @@ class JobPortalScraper:
         """Search MyCareersFuture (government job portal)."""
         jobs = []
         try:
+            # MyCareersFuture search URL
+            search_query = f"{job_title} {company}".strip()
+            url = f"https://www.mycareersfuture.gov.sg/search?search={search_query.replace(' ', '%20')}&sortBy=relevancy"
+            
             # MyCareersFuture API approach (simplified)
             jobs.append({
                 'title': job_title,
                 'company': company or 'Company',
                 'description': f"Government job portal data for {job_title} - actual API access limited in cloud deployment",
-                'source': 'MyCareersFuture'
+                'source': 'MyCareersFuture',
+                'url': url  # Include search URL
             })
             
         except Exception as e:
@@ -159,24 +177,36 @@ class JobPortalScraper:
                     for card in job_cards:
                         try:
                             title_elem = card.find(['h2', 'h3', 'h4'])
+                            # Try to find job URL within the card
+                            job_url = None
+                            link_elem = card.find('a', href=True)
+                            if link_elem:
+                                job_url = link_elem['href']
+                                if not job_url.startswith('http'):
+                                    job_url = 'https://jobs.careers.gov.sg' + job_url
+                            
                             if title_elem:
-                                jobs.append({
+                                job_data = {
                                     'title': title_elem.get_text(strip=True),
                                     'company': company or 'Government Agency',
                                     'description': f"Government sector job posting for {job_title}",
                                     'source': 'Careers@Gov'
-                                })
+                                }
+                                if job_url:
+                                    job_data['url'] = job_url
+                                jobs.append(job_data)
                         except Exception as e:
                             logger.debug(f"Error parsing Careers@Gov job card: {e}")
                             continue
             
-            # If no results found, add placeholder
+            # If no results found, add placeholder with search URL
             if not jobs:
                 jobs.append({
                     'title': job_title,
                     'company': company or 'Government Agency',
                     'description': f"Singapore government sector opportunities for {job_title}",
-                    'source': 'Careers@Gov'
+                    'source': 'Careers@Gov',
+                    'url': url  # Include search URL
                 })
                 
         except Exception as e:
@@ -438,13 +468,15 @@ class JobPortalScraper:
         except Exception as e:
             logger.warning(f"LinkedIn search error: {e}")
         
-        # If search didn't work, return placeholder
+        # If search didn't work, return placeholder with search URL
         if not jobs:
+            search_url = f"https://www.linkedin.com/jobs/search?keywords={search_query}&location=Singapore"
             jobs.append({
                 'title': job_title,
                 'company': company or 'Company',
                 'description': f"LinkedIn search attempted but no jobs found. Try providing a direct LinkedIn job URL for better results.",
-                'source': 'LinkedIn (Search Limited)'
+                'source': 'LinkedIn (Search Limited)',
+                'url': search_url
             })
         
         return jobs
