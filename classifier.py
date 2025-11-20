@@ -654,7 +654,24 @@ Company Description for SSIC Classification:"""
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are an expert in business industry analysis. Generate company descriptions that clearly identify the industry sector and core business activities for accurate industrial classification. Focus on WHAT the company does (industry) not WHO they hire (jobs)."
+                        "content": """You are an expert in business and organizational analysis with deep knowledge of Singapore's industries, government agencies, and institutional structures.
+
+Your task: Analyze the company name and context to generate an accurate industry-focused description.
+
+Key principles:
+1. Identify the PRIMARY business activity or organizational purpose
+2. Use precise industry terminology (e.g., "armed forces" not "defence services" for military)
+3. For government agencies, specify their exact mandate and operations
+4. For companies, identify their business model and core services
+5. Focus on WHAT the organization does, not WHO they employ
+
+Special cases:
+- Government ministries: State their specific government function (e.g., "armed forces operations", "education policy", "healthcare administration")
+- Statutory boards: Describe their regulatory or service mandate
+- Private companies: Identify industry sector and business activities
+- Non-profits: Describe their mission and service delivery
+
+Be precise and use industry-standard classifications."""
                     },
                     {
                         "role": "user",
@@ -671,14 +688,7 @@ Company Description for SSIC Classification:"""
         except Exception as e:
             logger.warning(f"Failed to generate company description: {str(e)}")
             # Fallback to basic industry description based on company name
-            # Check for known defence/military organizations
-            company_lower = company_name.lower()
-            if 'mindef' in company_lower or 'ministry of defence' in company_lower or 'mod' in company_lower:
-                return f"{company_name} is a government agency operating Singapore's armed forces and military operations responsible for national defence."
-            elif 'saf' in company_lower or 'army' in company_lower or 'navy' in company_lower or 'air force' in company_lower:
-                return f"{company_name} is part of Singapore's armed forces responsible for military operations and national defence."
-            else:
-                return f"{company_name} is a company operating in the business sector related to its core activities and services."
+            return f"{company_name} is an organization operating in business activities related to its core operations and services."
     
     def _ai_enhanced_ssic_classification(self, company: str, company_description: str, 
                                        sso_code: str, sso_title: str, 
@@ -698,15 +708,6 @@ Company Description for SSIC Classification:"""
             Tuple of (ssic_code, ssic_title, confidence_score)
         """
         try:
-            # Direct override for known defence/military organizations
-            company_lower = company.lower()
-            if 'mindef' in company_lower or 'ministry of defence' in company_lower or 'mod' in company_lower:
-                logger.info(f"Direct SSIC override for Ministry of Defence: 84221 (Armed forces)")
-                return ("84221", "Armed forces", 0.95)
-            elif 'saf' in company_lower or ('singapore' in company_lower and 'armed forces' in company_lower):
-                logger.info(f"Direct SSIC override for SAF: 84221 (Armed forces)")
-                return ("84221", "Armed forces", 0.95)
-            
             client = OpenAI(api_key=api_key)
             
             # Get top candidate SSIC codes using company analysis
@@ -718,48 +719,40 @@ Company Description for SSIC Classification:"""
             # Create AI prompt for SSIC reasoning with SSO compatibility
             candidates_text = "\n".join([f"- {code}: {title}" for code, title, _ in five_digit_candidates])
             
-            prompt = f"""You are an expert in Singapore Standard Industrial Classification (SSIC 2025). Determine the most appropriate 5-DIGIT SSIC code based on the company analysis and ensuring compatibility with the occupation classification.
+            prompt = f"""Analyze the company's business activities and determine the most appropriate 5-digit SSIC 2025 code.
 
 Company Name: {company}
 Company Analysis: {company_description}
 
-Occupation Classification (SSO 2024):
-- Code: {sso_code}
-- Title: {sso_title}
+Related Occupation: {sso_title} (SSO {sso_code})
 
-IMPORTANT REQUIREMENTS:
-1. Must be a 5-DIGIT SSIC code for maximum specificity
-2. Based primarily on the Company Analysis (business activities)
-3. Must be logically compatible with the SSO occupation code
-4. Consider industry-occupation compatibility
-
-Top 5-digit SSIC candidates:
+Top candidate SSIC codes based on text analysis:
 {candidates_text}
 
-Key Guidelines:
-1. Defence/Military (Ministry of Defence, Armed Forces, Military): Use 84221 (Armed forces) - NOT 84220 (Defence)
-2. General Government/Public Administration: Use 84110 (General public administration activities)
-3. Technology companies (software, IT): Use 62011 (Software development) or 62021 (IT consultancy)
-4. Banks/Financial institutions: Use 641xx, 642xx, 649xx codes  
-5. Healthcare organizations: Use 861xx codes
-6. Manufacturing companies: Use specific 1xxxx-3xxxx codes
-7. Retail companies: Use 47xxx codes only if they sell directly to consumers
-8. Consulting firms: Use 70xxx codes
+Classification Rules:
+1. MUST return a 5-digit code for maximum specificity
+2. Classification based on PRIMARY business activity described in Company Analysis
+3. SSIC code must be logically compatible with the occupation code
+4. Industry-occupation pairing must make sense (e.g., software companies hire developers, banks hire financial analysts)
 
-CRITICAL DEFENCE CLASSIFICATION:
-- Ministry of Defence / Mindef → 84221 (Armed forces)
-- Armed Forces / Military → 84221 (Armed forces)
-- SAF / Army / Navy / Air Force → 84221 (Armed forces)
-- Defence-related museums / heritage → 84221 (Armed forces) if under MoD
+Industry Patterns (use these as reasoning guides, not hard rules):
+- Organizations with "armed forces", "military operations", "defence" → Code 842xx group
+- General government "public administration" → Code 841xx group  
+- "Software development", "IT services", "technology" → Code 620xx group
+- "Banking", "financial services", "investment" → Code 64xxx group
+- "Healthcare", "medical services" → Code 86xxx group
+- "Manufacturing", "production" → Codes 1xxxx-3xxxx
+- "Consulting", "advisory services" → Code 70xxx group
+- "Retail sales" (direct to consumers) → Code 47xxx group
 
-Compatibility Check:
-- Software Developer (SSO 25121) → Technology company (SSIC 62011)
-- Financial Analyst (SSO 24131) → Financial services (SSIC 641xx) 
-- Management Consultant (SSO 24211) → Consulting firm (SSIC 70xxx)
-- Museum Manager at Ministry of Defence → Armed forces (SSIC 84221)
-- Government Officer (general) → Public administration (SSIC 84110)
+Reasoning Process:
+1. Read Company Analysis carefully - what is the PRIMARY activity?
+2. Look for industry keywords (armed forces, banking, software, manufacturing, etc.)
+3. Check candidate codes - which aligns with the primary activity?
+4. Verify occupation compatibility - does this industry typically employ this role?
+5. Select the most specific 5-digit code that matches
 
-Respond with ONLY the 5-digit SSIC code that best matches the company's business activities while being compatible with the occupation.
+Respond with ONLY the 5-digit SSIC code number.
 
 SSIC Code:"""
 
@@ -768,7 +761,23 @@ SSIC Code:"""
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are an expert in Singapore industrial classification. Provide only 5-digit SSIC codes that reflect company business activities and are compatible with occupation codes."
+                        "content": """You are an expert economist and industry analyst specializing in Singapore Standard Industrial Classification (SSIC 2025).
+
+Your expertise:
+- Deep understanding of Singapore's industrial structure and economic sectors
+- Knowledge of how different industries operate and their primary activities
+- Ability to distinguish between similar industries based on core business functions
+- Understanding of government vs private sector classifications
+- Recognition of industry-occupation relationships
+
+Your approach:
+1. Carefully analyze the company's PRIMARY business activity
+2. Identify key industry indicators in the description
+3. Match to the most specific 5-digit SSIC code available
+4. Ensure logical compatibility between industry and occupation
+5. Prioritize accuracy over speed - think through the classification
+
+Return ONLY the 5-digit numeric SSIC code that best represents the organization's primary business activity."""
                     },
                     {
                         "role": "user",
@@ -1122,31 +1131,9 @@ SSO Code:"""
             Dictionary with classification results including company description
         """
         try:
-            # CRITICAL: Direct override for Ministry of Defence / Mindef
-            company_lower = company.lower()
-            ssic_override = None
-            ssic_override_title = None
-            ssic_override_confidence = None
-            company_analysis_override = None
-            
-            if 'mindef' in company_lower or 'ministry of defence' in company_lower or company_lower in ['mod', 'mindef']:
-                logger.info(f"🎯 DIRECT OVERRIDE: {company} → SSIC 84221 (Armed forces)")
-                ssic_override = "84221"
-                ssic_override_title = "Armed forces"
-                ssic_override_confidence = 0.95
-                company_analysis_override = f"{company} is a government agency operating Singapore's armed forces and military operations, responsible for national defence, military training, defence policy, and armed forces management."
-            elif 'saf' in company_lower or 'singapore armed forces' in company_lower:
-                logger.info(f"🎯 DIRECT OVERRIDE: {company} → SSIC 84221 (Armed forces)")
-                ssic_override = "84221"
-                ssic_override_title = "Armed forces"
-                ssic_override_confidence = 0.95
-                company_analysis_override = f"{company} is Singapore's armed forces responsible for military operations and national defence."
-            
             # Step 1: Generate company description using AI for SSIC classification
             company_description = ""
-            if company_analysis_override:
-                company_description = company_analysis_override
-            elif api_key:
+            if api_key:
                 company_description = self.generate_company_description(
                     company, job_title, job_description, api_key
                 )
@@ -1163,13 +1150,8 @@ SSO Code:"""
                 )
             
             # Step 3: SSIC classification based on company analysis + SSO compatibility
-            # Use override if available, otherwise use AI classification
-            if ssic_override:
-                ssic_code = ssic_override
-                ssic_title = ssic_override_title
-                ssic_score = ssic_override_confidence
-                logger.info(f"✅ Using SSIC override: {ssic_code} - {ssic_title}")
-            elif api_key and company_description:
+            # Ensure we get 5-digit SSIC codes
+            if api_key and company_description:
                 ssic_code, ssic_title, ssic_score = self._ai_enhanced_ssic_classification(
                     company, company_description, sso_code, sso_title, api_key
                 )
