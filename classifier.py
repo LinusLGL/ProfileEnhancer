@@ -656,7 +656,7 @@ Company Description for SSIC Classification:"""
                     }
                 ],
                 temperature=0.3,
-                max_tokens=250
+                max_completion_tokens=250
             )
             
             company_description = response.choices[0].message.content.strip()
@@ -747,7 +747,7 @@ SSIC Code:"""
                     }
                 ],
                 temperature=0.1,
-                max_tokens=50
+                max_completion_tokens=50
             )
             
             ai_suggested_code = response.choices[0].message.content.strip()
@@ -1008,7 +1008,7 @@ SSO Code:"""
                     }
                 ],
                 temperature=0.1,
-                max_tokens=50
+                max_completion_tokens=50
             )
             
             ai_suggested_code = response.choices[0].message.content.strip()
@@ -1211,7 +1211,7 @@ Respond with just: GOOD if classifications are appropriate, or suggest better ma
                     }
                 ],
                 temperature=0.3,
-                max_tokens=500
+                max_completion_tokens=500
             )
             
             ai_feedback = response.choices[0].message.content.strip()

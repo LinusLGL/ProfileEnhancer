@@ -89,7 +89,7 @@ class JobDescriptionGenerator:
                     }
                 ],
                 temperature=0.7,
-                max_tokens=800
+                max_completion_tokens=800
             )
             
             generated_description = response.choices[0].message.content.strip()
@@ -266,7 +266,7 @@ Maintain the core information but enhance the presentation and completeness.
                     }
                 ],
                 temperature=0.7,
-                max_tokens=2000
+                max_completion_tokens=2000
             )
             
             return response.choices[0].message.content.strip()
