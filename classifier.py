@@ -913,7 +913,12 @@ SSIC Code:"""
             },
             # Government (841xx)
             '841': {
-                'compatible_sso_prefixes': ['111', '112', '121', '242', '251'],  # Officials, managers, analysts
+                'compatible_sso_prefixes': ['111', '112', '121', '122', '242', '251', '343'],  # Officials, managers, analysts
+                'score': 0.9
+            },
+            # Armed Forces (84221)
+            '842': {
+                'compatible_sso_prefixes': ['111', '112', '121', '122', '343'],  # Senior officials, managers, museum/heritage
                 'score': 0.9
             },
             # Healthcare (861xx) 
@@ -1008,16 +1013,26 @@ Key Guidelines for Common Job Titles:
 6. Marketing Manager: 12132 (Sales and marketing manager)
 7. Business Analyst: 24221 (Business analyst)
 8. Project Manager: 11201 (Finance manager) or 24221 (Business analyst) depending on focus
-9. Senior/Lead roles: Look for appropriate senior/management codes
-10. Specialist roles: Use specific technical specialist codes when available
+9. Museum/Heritage Manager: 34332 (Gallery, library and museum technician) or manager codes if senior
+10. Cultural/Arts Manager: Look for arts/culture management codes
+11. Senior/Lead roles: Look for appropriate senior/management codes
+12. Specialist roles: Use specific technical specialist codes when available
+
+CRITICAL for Museum/Heritage/Cultural Roles:
+- Museum Manager/Director: Use manager codes (121xx) or 34332 (Gallery, library and museum technician) based on seniority
+- Museum Development Manager: 12199 (Functional manager n.e.c.) for strategic/governance focus
+- Heritage Manager: 34332 (Gallery, library and museum technician) or manager codes
+- Collections Manager: 34332 (Gallery, library and museum technician)
+- Curator: 26321 (Librarian and related professional) or 34332 based on level
 
 Important Considerations:
 - Consider the seniority level (Senior, Lead, Principal, Manager, Director)
 - Look at actual responsibilities, not just job title
+- Museum/heritage governance and strategic roles should use manager codes (121xx)
 - For emerging tech roles (DevOps, Data Engineer), find the closest traditional equivalent
 - Management roles should use 1xxxx codes when appropriate
 - Technical roles should use 2xxxx codes
-- Consider industry context (finance vs tech vs healthcare)
+- Consider industry context (finance vs tech vs healthcare vs culture/heritage)
 
 Respond with ONLY the 5-digit SSO code that best matches this specific job role and responsibilities.
 
@@ -1107,9 +1122,31 @@ SSO Code:"""
             Dictionary with classification results including company description
         """
         try:
+            # CRITICAL: Direct override for Ministry of Defence / Mindef
+            company_lower = company.lower()
+            ssic_override = None
+            ssic_override_title = None
+            ssic_override_confidence = None
+            company_analysis_override = None
+            
+            if 'mindef' in company_lower or 'ministry of defence' in company_lower or company_lower in ['mod', 'mindef']:
+                logger.info(f"🎯 DIRECT OVERRIDE: {company} → SSIC 84221 (Armed forces)")
+                ssic_override = "84221"
+                ssic_override_title = "Armed forces"
+                ssic_override_confidence = 0.95
+                company_analysis_override = f"{company} is a government agency operating Singapore's armed forces and military operations, responsible for national defence, military training, defence policy, and armed forces management."
+            elif 'saf' in company_lower or 'singapore armed forces' in company_lower:
+                logger.info(f"🎯 DIRECT OVERRIDE: {company} → SSIC 84221 (Armed forces)")
+                ssic_override = "84221"
+                ssic_override_title = "Armed forces"
+                ssic_override_confidence = 0.95
+                company_analysis_override = f"{company} is Singapore's armed forces responsible for military operations and national defence."
+            
             # Step 1: Generate company description using AI for SSIC classification
             company_description = ""
-            if api_key:
+            if company_analysis_override:
+                company_description = company_analysis_override
+            elif api_key:
                 company_description = self.generate_company_description(
                     company, job_title, job_description, api_key
                 )
@@ -1126,8 +1163,13 @@ SSO Code:"""
                 )
             
             # Step 3: SSIC classification based on company analysis + SSO compatibility
-            # Ensure we get 5-digit SSIC codes
-            if api_key and company_description:
+            # Use override if available, otherwise use AI classification
+            if ssic_override:
+                ssic_code = ssic_override
+                ssic_title = ssic_override_title
+                ssic_score = ssic_override_confidence
+                logger.info(f"✅ Using SSIC override: {ssic_code} - {ssic_title}")
+            elif api_key and company_description:
                 ssic_code, ssic_title, ssic_score = self._ai_enhanced_ssic_classification(
                     company, company_description, sso_code, sso_title, api_key
                 )
