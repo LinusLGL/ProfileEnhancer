@@ -48,6 +48,9 @@ Job Description Generator Documentation
 ├── 🔧 Technical Documentation
 │   ├── PROJECT_SUMMARY.md ................ Complete technical specs
 │   ├── CHANGELOG.md ...................... Version history
+│   ├── AI_CLASSIFICATION_ENHANCEMENT.md .. AI reasoning vs hard-coding
+│   ├── WEB_SCRAPING_URL_SOURCES.md ....... URL source display feature
+│   ├── URL_DISPLAY_EXAMPLES.md ........... Visual examples of URL display
 │   └── Code Documentation ................ Inline comments in files
 │
 ├── 💻 Source Code
@@ -180,6 +183,60 @@ Job Description Generator Documentation
 - Feature additions
 - Bug fixes
 - Future roadmap
+
+---
+
+### AI_CLASSIFICATION_ENHANCEMENT.md (🤖 AI/ML Deep Dive)
+**What**: Technical explanation of AI classification intelligence  
+**Length**: ~10 min read  
+**Read When**: 
+- Understanding AI reasoning approach
+- Learning why hard-coding was removed
+- Implementing similar AI features
+- Debugging classification issues
+
+**Key Sections**:
+- Problem statement (Mindef classification)
+- Hard-coding vs AI reasoning comparison
+- Enhanced prompts with expert personas
+- Pattern learning approach
+- Testing criteria
+
+---
+
+### WEB_SCRAPING_URL_SOURCES.md (🔗 URL Feature)
+**What**: Technical documentation for URL source display  
+**Length**: ~12 min read  
+**Read When**: 
+- Understanding URL capture mechanism
+- Modifying scraper functions
+- Adding new job portals
+- Debugging URL extraction
+
+**Key Sections**:
+- URL capture by portal (LinkedIn, Indeed, etc.)
+- Dynamic URL construction
+- Display implementation in UI
+- No hard-coding approach
+- Troubleshooting URLs
+
+---
+
+### URL_DISPLAY_EXAMPLES.md (👁️ Visual Reference)
+**What**: Visual examples of URL display in UI  
+**Length**: ~8 min read  
+**Read When**: 
+- Learning what users will see
+- Understanding user experience
+- Training users
+- Designing UI improvements
+
+**Key Sections**:
+- Before/after comparisons
+- Real-world use cases
+- Browser rendering examples
+- Mobile view
+- User journey flows
 
 ---
 
