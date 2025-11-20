@@ -357,7 +357,7 @@ def main():
         )
         
         if use_web_search:
-            st.info("Will search: Indeed, JobStreet, MyCareersFuture")
+            st.info("Will search: LinkedIn, Indeed, JobStreet, MyCareersFuture, Careers@Gov")
         
         st.divider()
         

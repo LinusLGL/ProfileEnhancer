@@ -117,9 +117,10 @@ ProfileEnhancer uses **AI to analyze your company** and generate an industry-foc
 See [SSIC_AI_CLASSIFICATION.md](SSIC_AI_CLASSIFICATION.md) for detailed documentation and examples.
 
 ### Web Scraping Integration  
-- **Multiple Sources**: LinkedIn (direct URL scraping), Indeed, JobStreet, MyCareersFuture
+- **Multiple Sources**: LinkedIn, Indeed, JobStreet, MyCareersFuture, Careers@Gov (Singapore government portal)
 - **LinkedIn Integration**: Paste any LinkedIn job URL to extract job description automatically
 - **Context Enhancement**: Real job market data improves descriptions
+- **Source Attribution**: Each scraped result shows its source for transparency
 - **Error Handling**: Robust fallback mechanisms with multiple retry attempts
 
 ### Excel Batch Processing

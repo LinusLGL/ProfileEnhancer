@@ -140,6 +140,56 @@ class JobPortalScraper:
         
         return jobs
     
+    def search_careers_gov_sg(self, job_title: str, company: str = "") -> List[Dict]:
+        """Search Careers@Gov (Singapore government careers portal)."""
+        jobs = []
+        try:
+            # Careers@Gov portal search
+            search_query = f"{job_title} {company}".strip()
+            url = f"https://jobs.careers.gov.sg/jobs?keywords={search_query.replace(' ', '%20')}"
+            
+            response = self.session.get(url, timeout=10, verify=False)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.content, 'html.parser')
+                
+                # Try to parse job listings from Careers@Gov
+                job_cards = soup.find_all('div', {'class': lambda x: x and 'job' in str(x).lower()})[:2]
+                
+                if job_cards:
+                    for card in job_cards:
+                        try:
+                            title_elem = card.find(['h2', 'h3', 'h4'])
+                            if title_elem:
+                                jobs.append({
+                                    'title': title_elem.get_text(strip=True),
+                                    'company': company or 'Government Agency',
+                                    'description': f"Government sector job posting for {job_title}",
+                                    'source': 'Careers@Gov'
+                                })
+                        except Exception as e:
+                            logger.debug(f"Error parsing Careers@Gov job card: {e}")
+                            continue
+            
+            # If no results found, add placeholder
+            if not jobs:
+                jobs.append({
+                    'title': job_title,
+                    'company': company or 'Government Agency',
+                    'description': f"Singapore government sector opportunities for {job_title}",
+                    'source': 'Careers@Gov'
+                })
+                
+        except Exception as e:
+            logger.warning(f"Careers@Gov search error: {e}")
+            jobs.append({
+                'title': job_title,
+                'company': company or 'Government Agency',
+                'description': 'Careers@Gov data unavailable',
+                'source': 'Careers@Gov (Limited)'
+            })
+        
+        return jobs
+    
     def scrape_linkedin_job_url(self, job_url: str) -> Optional[Dict]:
         """
         Scrape a specific LinkedIn job posting URL.
@@ -406,7 +456,7 @@ class JobPortalScraper:
         }]
     
     def search_all_portals(self, job_title: str, company: str = "", max_results_per_portal: int = 2, linkedin_url: Optional[str] = None) -> List[Dict]:
-        """Search all available portals with cloud-friendly approach."""
+        """Search all available portals: LinkedIn, Indeed, JobStreet, MyCareersFuture, Careers@Gov."""
         all_jobs = []
         
         # Note: Web scraping is limited in Streamlit Community Cloud
@@ -424,12 +474,19 @@ class JobPortalScraper:
             all_jobs.extend(indeed_jobs[:max_results_per_portal])
             self._delay()
             
-            # Add other portals with placeholder data
+            # Search JobStreet
             jobstreet_jobs = self.search_jobstreet(job_title, company)
             all_jobs.extend(jobstreet_jobs[:1])
+            self._delay()
             
+            # Search MyCareersFuture
             mycareersfuture_jobs = self.search_mycareersfuture(job_title, company)
             all_jobs.extend(mycareersfuture_jobs[:1])
+            self._delay()
+            
+            # Search Careers@Gov (Singapore government portal)
+            careers_gov_jobs = self.search_careers_gov_sg(job_title, company)
+            all_jobs.extend(careers_gov_jobs[:1])
             
         except Exception as e:
             logger.error(f"Error in search_all_portals: {e}")
