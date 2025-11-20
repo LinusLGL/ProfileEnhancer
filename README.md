@@ -1,12 +1,12 @@
-# SS-Finder: Singapore Job Description Generator
+# ProfileEnhancer: AI-Powered Job Description Generator
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://ss-finder.streamlit.app)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://profileenhancer.streamlit.app)
 
 An AI-powered job description generator with Singapore Standard Industrial Classification (SSIC 2025) and Singapore Standard Occupational Classification (SSO 2024) codes.
 
 ## 🚀 Live Demo
 
-**Try the app**: [https://ss-finder.streamlit.app](https://ss-finder.streamlit.app)
+**Try the app**: [https://profileenhancer.streamlit.app](https://profileenhancer.streamlit.app)
 
 ## ✨ Key Features
 
@@ -52,8 +52,8 @@ An AI-powered job description generator with Singapore Standard Industrial Class
 
 ### Setup
 ```bash
-git clone https://github.com/LinusLGL/SS-Finder.git
-cd SS-Finder
+git clone https://github.com/LinusLGL/ProfileEnhancer.git
+cd ProfileEnhancer
 pip install -r requirements.txt
 ```
 
