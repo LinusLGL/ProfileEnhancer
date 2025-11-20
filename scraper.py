@@ -306,13 +306,84 @@ class JobPortalScraper:
                 jobs.append(scraped_job)
                 return jobs
         
-        # Otherwise, return placeholder (LinkedIn job search requires authentication)
-        jobs.append({
-            'title': job_title,
-            'company': company or 'Company',
-            'description': f"LinkedIn job search requires authentication. To scrape specific jobs, provide a direct LinkedIn job URL.",
-            'source': 'LinkedIn (Limited)'
-        })
+        # Try to search LinkedIn for matching jobs
+        try:
+            logger.info(f"Searching LinkedIn for: {job_title} at {company}")
+            
+            # Build search query
+            search_query = f"{job_title} {company}".strip().replace(' ', '%20')
+            search_url = f"https://www.linkedin.com/jobs/search?keywords={search_query}&location=Singapore"
+            
+            # Add headers to mimic browser
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1'
+            }
+            
+            time.sleep(random.uniform(2, 4))  # Random delay
+            response = requests.get(search_url, headers=headers, timeout=15, verify=False, allow_redirects=True)
+            
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.content, 'html.parser')
+                
+                # Look for job cards in the search results
+                job_cards = soup.find_all('div', {'class': lambda x: x and 'job' in x.lower() and 'card' in x.lower()})[:3]
+                
+                if not job_cards:
+                    # Try alternative selectors
+                    job_cards = soup.find_all('li', {'class': lambda x: x and 'job' in x.lower()})[:3]
+                
+                for card in job_cards:
+                    try:
+                        # Try to find the job link
+                        link_elem = card.find('a', href=True)
+                        if link_elem and '/jobs/view/' in link_elem['href']:
+                            job_url = link_elem['href']
+                            
+                            # Make sure it's a full URL
+                            if not job_url.startswith('http'):
+                                job_url = 'https://www.linkedin.com' + job_url
+                            
+                            # Clean up the URL (remove query parameters except the job ID)
+                            if '?' in job_url:
+                                base_url = job_url.split('?')[0]
+                            else:
+                                base_url = job_url
+                            
+                            logger.info(f"Found LinkedIn job URL: {base_url}")
+                            
+                            # Try to scrape this job
+                            scraped_job = self.scrape_linkedin_job_url(base_url)
+                            if scraped_job:
+                                jobs.append(scraped_job)
+                                # Return the first successful match
+                                return jobs
+                    except Exception as e:
+                        logger.debug(f"Error parsing job card: {e}")
+                        continue
+                
+                # If we found job cards but couldn't scrape them, add a note
+                if job_cards and not jobs:
+                    logger.warning("Found LinkedIn jobs but couldn't scrape details")
+            else:
+                logger.warning(f"LinkedIn search returned status code: {response.status_code}")
+        
+        except Exception as e:
+            logger.warning(f"LinkedIn search error: {e}")
+        
+        # If search didn't work, return placeholder
+        if not jobs:
+            jobs.append({
+                'title': job_title,
+                'company': company or 'Company',
+                'description': f"LinkedIn search attempted but no jobs found. Try providing a direct LinkedIn job URL for better results.",
+                'source': 'LinkedIn (Search Limited)'
+            })
         
         return jobs
     
