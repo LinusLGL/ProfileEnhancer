@@ -10,12 +10,13 @@ An AI-powered job description generator with Singapore Standard Industrial Class
 
 ## ✨ Key Features
 
-- **🤖 AI-Enhanced Classification**: Uses OpenAI GPT-5 mini for intelligent business analysis
-- **🎯 5-Digit SSIC Codes**: Maximum specificity for industry classification  
-- **🔗 SSIC-SSO Compatibility**: Prevents incompatible industry-occupation pairings
+- **🤖 AI Company Analysis**: Automatically generates company description to determine accurate 5-digit SSIC codes
+- **🎯 Industry-Based SSIC**: Classification based on company's business activities, not job titles
+- **🔗 SSIC-SSO Compatibility**: Validates that industry and occupation codes match logically
 - **📊 Excel Batch Processing**: Upload files and get enhanced output with 4 new columns
 - **🌐 Web Scraping**: Integrates data from LinkedIn, Indeed, JobStreet, MyCareersFuture
 - **🇸🇬 Singapore Standards**: SSIC 2025 (1,694 codes) + SSO 2024 (1,617 codes)
+- **⚡ GPT-5 Mini**: Fast, accurate, and cost-effective (~$0.01-$0.02 per job)
 
 ## 📋 How It Works
 
@@ -35,15 +36,28 @@ An AI-powered job description generator with Singapore Standard Industrial Class
 
 ## 🛠️ Classification Method
 
-### SSIC (Industry Classification)
-1. **Company Analysis**: AI generates industry-focused company description
-2. **5-Digit Specificity**: Ensures maximum classification detail
-3. **SSO Compatibility**: Checks logical industry-occupation pairing
+### SSIC (Industry Classification) - AI-Powered
+1. **🤖 AI Company Analysis**: Automatically generates industry-focused company description
+   - Identifies primary industry sector (Technology, Finance, Healthcare, etc.)
+   - Analyzes core business activities and services
+   - Focuses on WHAT the company does, not WHO they hire
+2. **📊 5-Digit SSIC Determination**: AI uses company analysis to find matching SSIC code
+   - Searches 1,694 SSIC codes for best match
+   - Ensures maximum classification specificity
+   - Typical confidence: 90%+
+3. **🔗 SSO Compatibility**: Validates industry-occupation pairing
+   - Technology company (62011) ↔ Software Developer (25121) ✅
+   - Bank (64191) ↔ Financial Analyst (24131) ✅
+   - Government (84220) ↔ Public Sector Manager (11201) ✅
 
-### SSO (Occupation Classification)  
+**Example**: "DBS Bank" → AI analyzes → "Financial services institution providing banking services" → SSIC 64191 (Commercial banks)
+
+### SSO (Occupation Classification) - AI-Enhanced
 1. **Job Role Analysis**: Uses job title + job description
 2. **AI Enhancement**: Contextual understanding of job functions
-3. **5-Digit Precision**: Specific occupation codes
+3. **5-Digit Precision**: Specific occupation codes from 1,617 SSO codes
+
+📖 **Learn More**: See [SSIC_AI_CLASSIFICATION.md](SSIC_AI_CLASSIFICATION.md) for detailed documentation
 
 ## 🔧 Local Development
 
@@ -86,10 +100,21 @@ python-dotenv>=1.0.0
 
 ## 🌟 Advanced Features
 
-### AI-Enhanced Classification
-- **Company Analysis**: Understands business context for accurate SSIC
-- **Compatibility Matrix**: Technology ↔ Tech roles, Finance ↔ Finance roles
-- **Confidence Boosting**: Enhanced algorithms with 60-100% accuracy
+### AI-Powered Company Analysis for SSIC
+ProfileEnhancer uses **AI to analyze your company** and generate an industry-focused description that determines the most accurate 5-digit SSIC code:
+
+**How it works**:
+1. You provide: Company name + Job title + Job description
+2. AI generates: "DBS Bank is a financial services institution providing banking services..."
+3. System determines: SSIC 64191 (Commercial banks) - 5 digits, 90% confidence
+
+**Benefits**:
+- ✅ **Accurate**: Based on actual business activities
+- ✅ **Consistent**: Same company → Same SSIC code regardless of job role
+- ✅ **Specific**: Always 5-digit SSIC codes for maximum detail
+- ✅ **Compatible**: Validates SSIC-SSO pairings automatically
+
+See [SSIC_AI_CLASSIFICATION.md](SSIC_AI_CLASSIFICATION.md) for detailed documentation and examples.
 
 ### Web Scraping Integration  
 - **Multiple Sources**: LinkedIn (direct URL scraping), Indeed, JobStreet, MyCareersFuture
