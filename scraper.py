@@ -37,6 +37,170 @@ class JobPortalScraper:
         """Add random delay between requests to avoid rate limiting."""
         time.sleep(random.uniform(1, 3))
     
+    def web_search_job_context(self, company: str, job_title: str, api_key: Optional[str] = None) -> str:
+        """
+        Perform a comprehensive web search to gather context about the job and company.
+        Uses DuckDuckGo to search for relevant information.
+        
+        Args:
+            company: Company name
+            job_title: Job title
+            api_key: OpenAI API key (for AI-powered result analysis)
+            
+        Returns:
+            Formatted string with web search results and context
+        """
+        try:
+            logger.info(f"🔍 Performing web search for: {job_title} at {company}")
+            
+            # Expand company name for better search
+            company_expanded = self._expand_company_name(company)
+            
+            # Multiple search queries for comprehensive context
+            search_queries = [
+                f'"{company_expanded}" "{job_title}" responsibilities',
+                f'"{company_expanded}" "{job_title}" job description',
+                f'{company_expanded} {job_title} role duties'
+            ]
+            
+            all_results = []
+            
+            for query in search_queries:
+                try:
+                    search_url = f"https://html.duckduckgo.com/html/?q={query.replace(' ', '+')}"
+                    response = self.session.get(search_url, timeout=5, verify=False)
+                    
+                    if response.status_code == 200:
+                        soup = BeautifulSoup(response.content, 'html.parser')
+                        
+                        # Extract search result snippets
+                        results = soup.find_all('a', class_='result__snippet', limit=3)
+                        for result in results:
+                            snippet = result.get_text(strip=True)
+                            if len(snippet) > 50:  # Only meaningful snippets
+                                all_results.append(snippet)
+                        
+                        # Also check result titles
+                        titles = soup.find_all('a', class_='result__a', limit=3)
+                        for title in titles:
+                            title_text = title.get_text(strip=True)
+                            if job_title.lower() in title_text.lower():
+                                all_results.append(f"Found: {title_text}")
+                    
+                    time.sleep(1)  # Respectful delay between searches
+                    
+                except Exception as e:
+                    logger.debug(f"Search query failed: {e}")
+                    continue
+            
+            if all_results:
+                # Use AI to summarize and extract key insights if API key provided
+                if api_key:
+                    logger.info("🤖 Using AI to analyze web search results...")
+                    context = self._ai_analyze_web_results(all_results, company, job_title, api_key)
+                    return context
+                else:
+                    # Return raw results
+                    unique_results = list(set(all_results))[:5]  # Remove duplicates, limit to 5
+                    return "\n\n".join(unique_results)
+            else:
+                logger.info("No web search results found")
+                return ""
+                
+        except Exception as e:
+            logger.error(f"Web search error: {e}")
+            return ""
+    
+    def _expand_company_name(self, company: str) -> str:
+        """Expand company abbreviations for better search results."""
+        company_lower = company.lower()
+        
+        # Government ministries
+        if 'mindef' in company_lower or company_lower == 'mod':
+            return "Ministry of Defence Singapore"
+        elif 'moe' in company_lower:
+            return "Ministry of Education Singapore"
+        elif 'moh' in company_lower:
+            return "Ministry of Health Singapore"
+        elif 'mom' in company_lower:
+            return "Ministry of Manpower Singapore"
+        elif 'mfa' in company_lower:
+            return "Ministry of Foreign Affairs Singapore"
+        elif 'mha' in company_lower:
+            return "Ministry of Home Affairs Singapore"
+        elif 'mtc' in company_lower or 'mci' in company_lower:
+            return "Ministry of Communications and Information Singapore"
+        elif 'mnd' in company_lower:
+            return "Ministry of National Development Singapore"
+        elif 'mof' in company_lower:
+            return "Ministry of Finance Singapore"
+        elif 'mti' in company_lower:
+            return "Ministry of Trade and Industry Singapore"
+        
+        # Statutory boards
+        elif 'iras' in company_lower:
+            return "Inland Revenue Authority of Singapore"
+        elif 'cpf' in company_lower:
+            return "Central Provident Fund Board Singapore"
+        elif 'hdb' in company_lower:
+            return "Housing Development Board Singapore"
+        elif 'lta' in company_lower:
+            return "Land Transport Authority Singapore"
+        elif 'nea' in company_lower:
+            return "National Environment Agency Singapore"
+        
+        return company
+    
+    def _ai_analyze_web_results(self, results: List[str], company: str, job_title: str, api_key: str) -> str:
+        """
+        Use AI to analyze web search results and extract key job context.
+        
+        Args:
+            results: List of web search result snippets
+            company: Company name
+            job_title: Job title
+            api_key: OpenAI API key
+            
+        Returns:
+            AI-generated summary of key job responsibilities and context
+        """
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=api_key)
+            
+            results_text = "\n\n".join(results)
+            
+            prompt = f"""Analyze these web search results about the "{job_title}" role at {company}:
+
+{results_text}
+
+Extract and summarize:
+1. Key responsibilities and duties for this role
+2. Important context about this position at this company
+3. Any unique aspects or requirements mentioned
+
+Provide a concise summary (100-150 words) that will help create an accurate job description.
+Focus on factual information found in the search results."""
+
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a research analyst extracting key job information from web sources."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_completion_tokens=300,
+                temperature=0.3
+            )
+            
+            summary = response.choices[0].message.content.strip()
+            logger.info("✅ AI analysis of web results complete")
+            return f"**Web Search Context:**\n{summary}"
+            
+        except Exception as e:
+            logger.error(f"AI analysis failed: {e}")
+            # Return raw results as fallback
+            return "\n\n".join(results[:3])
+    
     def ai_search_linkedin_url(self, company: str, job_title: str, api_key: Optional[str] = None) -> Optional[str]:
         """
         Use AI to intelligently search for LinkedIn job URL.
@@ -566,21 +730,8 @@ Your response (just the number or NONE):"""
         try:
             logger.info(f"Searching LinkedIn for: {job_title} at {company}")
             
-            # Expand company name abbreviations for better search results
-            company_expanded = company
-            company_lower = company.lower()
-            if 'mindef' in company_lower or company_lower == 'mod':
-                company_expanded = "Ministry of Defence Singapore"
-            elif 'moe' in company_lower:
-                company_expanded = "Ministry of Education Singapore"
-            elif 'moh' in company_lower:
-                company_expanded = "Ministry of Health Singapore"
-            elif 'mom' in company_lower:
-                company_expanded = "Ministry of Manpower Singapore"
-            elif 'mfa' in company_lower:
-                company_expanded = "Ministry of Foreign Affairs Singapore"
-            elif 'mha' in company_lower:
-                company_expanded = "Ministry of Home Affairs Singapore"
+            # Use centralized company name expansion
+            company_expanded = self._expand_company_name(company)
             
             # Build search query with expanded company name
             search_query = f"{job_title} {company_expanded}".strip().replace(' ', '%20')

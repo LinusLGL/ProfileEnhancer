@@ -114,11 +114,22 @@ def process_single_job(company: str, job_title: str, job_description: str,
             
             web_results_text = ""
             search_results = []
+            scraper = None
             
-            # Web search if enabled or LinkedIn URL provided
+            # Always create scraper for web search context
             if use_web_search or linkedin_url:
                 scraper = JobPortalScraper()
-                
+            
+            # Step 1: Comprehensive web search for job context (NEW!)
+            web_context = ""
+            if use_web_search and scraper:
+                st.info("🌐 Searching the web for job context and responsibilities...")
+                web_context = scraper.web_search_job_context(company, job_title, api_key)
+                if web_context:
+                    st.success("✅ Found relevant web context!")
+            
+            # Step 2: Job portal specific search
+            if use_web_search or linkedin_url:
                 # AI-powered LinkedIn search (passes API key for enhanced capabilities)
                 # System will intelligently discover LinkedIn job URLs without hard-coding
                 if linkedin_url and 'linkedin.com/jobs/view' in linkedin_url:
@@ -135,7 +146,14 @@ def process_single_job(company: str, job_title: str, job_description: str,
                     other_results = scraper.search_all_portals(job_title, company, api_key=api_key)
                     search_results.extend(other_results)
                 
-                web_results_text = scraper.extract_job_details(search_results)
+                portal_results_text = scraper.extract_job_details(search_results)
+                
+                # Combine web context with portal results
+                if web_context:
+                    web_results_text = f"{web_context}\n\n---\n\n**Job Portal Results:**\n{portal_results_text}"
+                else:
+                    web_results_text = portal_results_text
+                
                 st.session_state.search_results = search_results
             
             # Generate description
@@ -201,8 +219,18 @@ def process_excel_file(df: pd.DataFrame, use_web_search: bool, api_key: str) -> 
             # Web search if enabled
             web_results_text = ""
             if use_web_search and scraper:
-                search_results = scraper.search_all_portals(job_title, company)
-                web_results_text = scraper.extract_job_details(search_results)
+                # Step 1: Get web context
+                web_context = scraper.web_search_job_context(company, job_title, api_key)
+                
+                # Step 2: Get job portal results
+                search_results = scraper.search_all_portals(job_title, company, api_key=api_key)
+                portal_results_text = scraper.extract_job_details(search_results)
+                
+                # Combine results
+                if web_context:
+                    web_results_text = f"{web_context}\n\n---\n\n**Job Portal Results:**\n{portal_results_text}"
+                else:
+                    web_results_text = portal_results_text
             
             # Generate job description with classification
             generated_desc = generator.generate_job_description(
