@@ -111,7 +111,7 @@ This will create `sample_input.xlsx` with example data.
 
 The application uses OpenAI's API. Estimated costs:
 - Single job: ~$0.01 - $0.05 per generation
-- Model used: GPT-4o-mini (cost-efficient)
+- Model used: GPT-5 mini (cost-efficient)
 - Web search is free but may be rate-limited
 
 ### 8. Troubleshooting
@@ -166,7 +166,7 @@ Edit `generator.py` and modify the `_build_prompt` method to change how job desc
    - Review generated descriptions before using
 
 3. **Cost Management:**
-   - Use GPT-4o-mini for cost efficiency
+   - Use GPT-5 mini for cost efficiency
    - Disable web search if not needed
    - Process during off-peak hours
 

@@ -10,7 +10,7 @@ An AI-powered job description generator with Singapore Standard Industrial Class
 
 ## ✨ Key Features
 
-- **🤖 AI-Enhanced Classification**: Uses OpenAI GPT-4o-mini for intelligent business analysis
+- **🤖 AI-Enhanced Classification**: Uses OpenAI GPT-5 mini for intelligent business analysis
 - **🎯 5-Digit SSIC Codes**: Maximum specificity for industry classification  
 - **🔗 SSIC-SSO Compatibility**: Prevents incompatible industry-occupation pairings
 - **📊 Excel Batch Processing**: Upload files and get enhanced output with 4 new columns
@@ -123,7 +123,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🙏 Acknowledgments
 
 - Singapore Department of Statistics for SSIC 2025 and SSO 2024 standards
-- OpenAI for GPT-4o-mini API
+- OpenAI for GPT-5 mini API
 - Streamlit for the amazing framework
 
 ## 📞 Support

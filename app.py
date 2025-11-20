@@ -475,7 +475,7 @@ job-description-generator/
             - **AI Analysis**: Company analysis determines accurate SSIC code
             - **Classification**: 5-digit SSIC 2025 (1,694 codes) + SSO 2024 (1,617 codes)
             - **Compatibility**: System validates SSIC-SSO pairings automatically
-            - **Cost**: ~$0.01-$0.03 per job using GPT-4o-mini
+            - **Cost**: ~$0.01-$0.03 per job using GPT-5 mini
             - **Processing**: ~10-15 seconds per job with web search
             """)
             
@@ -497,7 +497,7 @@ job-description-generator/
             
             st.markdown("#### 🔧 Technical Details")
             st.markdown("""
-            - **AI Model**: OpenAI GPT-4o-mini
+            - **AI Model**: OpenAI GPT-5 mini
             - **Web Scraping**: Requests + BeautifulSoup (cloud-compatible)
             - **Classification**: SSIC 2025 + SSO 2024 standards
             - **API Key**: Auto-detected from Streamlit secrets

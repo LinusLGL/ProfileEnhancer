@@ -25,7 +25,7 @@ A comprehensive Streamlit web application that generates detailed, professional 
 - Configurable search options
 
 ### 4. **AI-Powered Generation**
-- Uses OpenAI GPT models (default: GPT-4o-mini for efficiency)
+- Uses OpenAI GPT models (default: GPT-5 mini for efficiency)
 - Generates comprehensive job descriptions with:
   - Job Overview/Summary
   - Key Responsibilities
@@ -180,7 +180,7 @@ Output: Same Excel + "Generated Job Description" column with full descriptions
 ### In the Application
 - **API Key**: Enter directly or load from .env
 - **Web Search**: Enable/disable portal searching
-- **Model Selection**: Can be modified in code (GPT-4o-mini, GPT-4, etc.)
+- **Model Selection**: Can be modified in code (GPT-5 mini, GPT-4, etc.)
 
 ### In Code
 - **Scraper Settings**: `scraper.py` - Configure timeouts, user agents

@@ -51,7 +51,7 @@ class JobDescriptionGenerator:
         job_title: str,
         initial_description: str = "",
         web_search_results: str = "",
-        model: str = "gpt-4o-mini"
+        model: str = "gpt-5-mini"
     ) -> str:
         """
         Generate a comprehensive job description using AI.
@@ -61,7 +61,7 @@ class JobDescriptionGenerator:
             job_title: Job title/position
             initial_description: User-provided initial description (optional)
             web_search_results: Scraped job descriptions from web (optional)
-            model: OpenAI model to use (default: gpt-4o-mini for cost efficiency)
+            model: OpenAI model to use (default: gpt-5-mini for cost efficiency)
             
         Returns:
             Generated detailed job description
@@ -219,7 +219,7 @@ Do not include qualifications, requirements, benefits, or other sections - just 
         company: str,
         job_title: str,
         existing_description: str,
-        model: str = "gpt-4o-mini"
+        model: str = "gpt-5-mini"
     ) -> str:
         """
         Enhance an existing job description to make it more comprehensive.

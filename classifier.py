@@ -644,7 +644,7 @@ Examples:
 Company Description for SSIC Classification:"""
 
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5-mini",
                 messages=[
                     {
                         "role": "system",
@@ -735,7 +735,7 @@ Respond with ONLY the 5-digit SSIC code that best matches the company's business
 SSIC Code:"""
 
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5-mini",
                 messages=[
                     {
                         "role": "system",
@@ -996,7 +996,7 @@ Respond with ONLY the 5-digit SSO code that best matches this specific job role 
 SSO Code:"""
 
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5-mini",
                 messages=[
                     {
                         "role": "system",
@@ -1199,7 +1199,7 @@ Respond with just: GOOD if classifications are appropriate, or suggest better ma
 """
             
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5-mini",
                 messages=[
                     {
                         "role": "system",

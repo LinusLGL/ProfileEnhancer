@@ -111,7 +111,7 @@ This creates **sample_input.xlsx** with 5 example jobs.
 ### Change AI Model (in generator.py)
 ```python
 # Line ~45, change model parameter
-model="gpt-4o-mini"  # Cost-effective (default)
+model="gpt-5-mini"  # Cost-effective (default)
 model="gpt-4o"       # Better quality, higher cost
 model="gpt-4-turbo"  # Best quality, highest cost
 ```
@@ -134,7 +134,7 @@ if len(df) > 100:  # Change 100 to your preferred limit
 
 ## ⚠️ Important Notes
 
-1. **API Costs**: Each generation costs ~$0.01-$0.03 (GPT-4o-mini)
+1. **API Costs**: Each generation costs ~$0.01-$0.03 (GPT-5 mini)
 2. **Web Scraping**: May be rate-limited by job portals
 3. **Chrome Required**: For Selenium web scraping
 4. **Internet Connection**: Required for API and scraping
@@ -230,7 +230,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 3. **Enable Web Search**: Improves quality significantly
 4. **Review Output**: Always review before publishing
 5. **Batch Wisely**: Process 20-30 jobs at a time
-6. **Save Costs**: Use GPT-4o-mini model (default)
+6. **Save Costs**: Use GPT-5 mini model (default)
 
 ## 🎊 You're Ready!
 

@@ -159,7 +159,7 @@ Input: Company + Job Title + Optional Description
   ↓
 Web Search: Indeed, JobStreet, MyCareersFuture
   ↓
-AI Generation: GPT-4o-mini creates comprehensive description
+AI Generation: GPT-5 mini creates comprehensive description
   ↓
 Output: Professional job description (400-800 words)
 ```
@@ -180,7 +180,7 @@ Output: Excel with original data + generated descriptions
 ## 💰 COST BREAKDOWN
 
 ### Per Job Description
-- **GPT-4o-mini**: $0.01 - $0.03
+- **GPT-5 mini**: $0.01 - $0.03
 - **GPT-4**: $0.10 - $0.30
 - **Web Scraping**: Free
 
@@ -189,7 +189,7 @@ Output: Excel with original data + generated descriptions
 - **50 jobs**: ~$0.50 - $1.50
 - **100 jobs**: ~$1.00 - $3.00
 
-**Using GPT-4o-mini (default) = Most cost-effective**
+**Using GPT-5 mini (default) = Most cost-effective**
 
 ---
 
@@ -227,7 +227,7 @@ Output: Excel with original data + generated descriptions
 ### Change AI Model
 **File**: generator.py, Line ~45
 ```python
-model="gpt-4o-mini"  # Cheap & fast ✅
+model="gpt-5-mini"  # Cheap & fast ✅
 model="gpt-4o"       # Better quality
 model="gpt-4-turbo"  # Best quality
 ```
@@ -332,7 +332,7 @@ After setup, you should be able to:
    - Enable web search for reference data
 
 2. **Cost Management**
-   - Use GPT-4o-mini (default)
+   - Use GPT-5 mini (default)
    - Process in batches of 20-30
    - Disable web search if not needed
 
