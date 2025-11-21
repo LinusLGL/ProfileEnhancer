@@ -116,43 +116,38 @@ def process_single_job(company: str, job_title: str, job_description: str,
             search_results = []
             scraper = None
             
-            # Always create scraper for web search context
+            # Tavily-style fast intelligent search
             if use_web_search or linkedin_url:
                 scraper = JobPortalScraper()
-            
-            # Step 1: Comprehensive web search for job context (NEW!)
-            web_context = ""
-            if use_web_search and scraper:
-                st.info("🌐 Searching the web for job context and responsibilities...")
-                web_context = scraper.web_search_job_context(company, job_title, api_key)
-                if web_context:
-                    st.success("✅ Found relevant web context!")
-            
-            # Step 2: Job portal specific search
-            if use_web_search or linkedin_url:
-                # AI-powered LinkedIn search (passes API key for enhanced capabilities)
-                # System will intelligently discover LinkedIn job URLs without hard-coding
-                if linkedin_url and 'linkedin.com/jobs/view' in linkedin_url:
-                    # User provided URL - use it directly
-                    linkedin_results = scraper.search_linkedin(job_title, company, linkedin_url=linkedin_url, api_key=api_key)
+                
+                # If user provided URL, use it directly
+                if linkedin_url and ('linkedin.com' in linkedin_url or 'careers.gov.sg' in linkedin_url):
+                    st.info(f"📎 Using provided URL: {linkedin_url}")
+                    # Extract from provided URL
+                    if 'careers.gov.sg' in linkedin_url:
+                        result = {'url': linkedin_url, 'source': 'career@gov', 'title': job_title, 'company': company, 'description': 'Government job posting'}
+                    else:
+                        result = scraper._scrape_linkedin_fast(linkedin_url) or {'url': linkedin_url, 'source': 'LinkedIn', 'title': job_title, 'company': company, 'description': 'Job posting'}
+                    search_results = [result]
                 else:
-                    # No URL provided - use AI to discover it automatically
-                    linkedin_results = scraper.search_linkedin(job_title, company, linkedin_url=None, api_key=api_key)
+                    # Fast intelligent search (Tavily-style)
+                    st.info("⚡ Fast intelligent search: Finding actual job posting...")
+                    result = scraper.intelligent_job_url_search(company, job_title, api_key)
+                    
+                    if result:
+                        if 'search' not in result['source'].lower():
+                            st.success(f"✅ Found job posting on {result['source']}: {result['url']}")
+                        else:
+                            st.warning(f"⚠️ No direct posting found. Search URL provided.")
+                        search_results = [result]
                 
-                search_results.extend(linkedin_results)
-                
-                # Then search other portals if web search is enabled
-                if use_web_search:
-                    other_results = scraper.search_all_portals(job_title, company, api_key=api_key)
-                    search_results.extend(other_results)
-                
-                portal_results_text = scraper.extract_job_details(search_results)
-                
-                # Combine web context with portal results
-                if web_context:
-                    web_results_text = f"{web_context}\n\n---\n\n**Job Portal Results:**\n{portal_results_text}"
-                else:
-                    web_results_text = portal_results_text
+                # Extract job details for AI
+                if search_results:
+                    job_info = search_results[0]
+                    web_results_text = f"**Source:** [{job_info['source']}]({job_info['url']})\n\n"
+                    web_results_text += f"**Title:** {job_info['title']}\n"
+                    web_results_text += f"**Company:** {job_info['company']}\n\n"
+                    web_results_text += f"**Description:**\n{job_info.get('description', 'See link for details')}"
                 
                 st.session_state.search_results = search_results
             
@@ -216,21 +211,16 @@ def process_excel_file(df: pd.DataFrame, use_web_search: bool, api_key: str) -> 
             job_title = str(row['Job Title'])
             job_description = str(row.get('Job Description', ''))
             
-            # Web search if enabled
+            # Fast intelligent search if enabled
             web_results_text = ""
             if use_web_search and scraper:
-                # Step 1: Get web context
-                web_context = scraper.web_search_job_context(company, job_title, api_key)
-                
-                # Step 2: Get job portal results
-                search_results = scraper.search_all_portals(job_title, company, api_key=api_key)
-                portal_results_text = scraper.extract_job_details(search_results)
-                
-                # Combine results
-                if web_context:
-                    web_results_text = f"{web_context}\n\n---\n\n**Job Portal Results:**\n{portal_results_text}"
-                else:
-                    web_results_text = portal_results_text
+                # Tavily-style fast search
+                result = scraper.intelligent_job_url_search(company, job_title, api_key)
+                if result:
+                    web_results_text = f"**Source:** [{result['source']}]({result['url']})\n\n"
+                    web_results_text += f"**Title:** {result['title']}\n"
+                    web_results_text += f"**Company:** {result['company']}\n\n"
+                    web_results_text += f"**Description:**\n{result.get('description', 'See link for details')}"
             
             # Generate job description with classification
             generated_desc = generator.generate_job_description(

@@ -37,79 +37,180 @@ class JobPortalScraper:
         """Add random delay between requests to avoid rate limiting."""
         time.sleep(random.uniform(1, 3))
     
-    def web_search_job_context(self, company: str, job_title: str, api_key: Optional[str] = None) -> str:
+    def intelligent_job_url_search(self, company: str, job_title: str, api_key: Optional[str] = None) -> Dict:
         """
-        Perform a comprehensive web search to gather context about the job and company.
-        Uses DuckDuckGo to search for relevant information.
+        Tavily-style fast intelligent search to find actual job posting URLs.
+        Prioritizes: 1) career@gov, 2) LinkedIn
         
         Args:
             company: Company name
             job_title: Job title
-            api_key: OpenAI API key (for AI-powered result analysis)
+            api_key: OpenAI API key (for AI-enhanced extraction)
             
         Returns:
-            Formatted string with web search results and context
+            Dict with 'url', 'source', 'title', 'description'
         """
         try:
-            logger.info(f"🔍 Performing web search for: {job_title} at {company}")
+            logger.info(f"⚡ Fast intelligent search: {job_title} at {company}")
             
-            # Expand company name for better search
+            # Expand company name
             company_expanded = self._expand_company_name(company)
             
-            # Multiple search queries for comprehensive context
-            search_queries = [
-                f'"{company_expanded}" "{job_title}" responsibilities',
-                f'"{company_expanded}" "{job_title}" job description',
-                f'{company_expanded} {job_title} role duties'
-            ]
+            # STRATEGY 1: Search career@gov (government jobs - FASTEST)
+            if self._is_government_entity(company_expanded):
+                logger.info("🏛️ Searching career@gov (government portal)...")
+                careers_gov_result = self._search_careers_gov_fast(company_expanded, job_title)
+                if careers_gov_result:
+                    logger.info(f"✅ Found on career@gov: {careers_gov_result['url']}")
+                    return careers_gov_result
             
-            all_results = []
+            # STRATEGY 2: Search LinkedIn with targeted query
+            logger.info("💼 Searching LinkedIn...")
+            linkedin_result = self._search_linkedin_fast(company_expanded, job_title, api_key)
+            if linkedin_result:
+                logger.info(f"✅ Found on LinkedIn: {linkedin_result['url']}")
+                return linkedin_result
             
-            for query in search_queries:
-                try:
-                    search_url = f"https://html.duckduckgo.com/html/?q={query.replace(' ', '+')}"
-                    response = self.session.get(search_url, timeout=5, verify=False)
-                    
-                    if response.status_code == 200:
-                        soup = BeautifulSoup(response.content, 'html.parser')
-                        
-                        # Extract search result snippets
-                        results = soup.find_all('a', class_='result__snippet', limit=3)
-                        for result in results:
-                            snippet = result.get_text(strip=True)
-                            if len(snippet) > 50:  # Only meaningful snippets
-                                all_results.append(snippet)
-                        
-                        # Also check result titles
-                        titles = soup.find_all('a', class_='result__a', limit=3)
-                        for title in titles:
-                            title_text = title.get_text(strip=True)
-                            if job_title.lower() in title_text.lower():
-                                all_results.append(f"Found: {title_text}")
-                    
-                    time.sleep(1)  # Respectful delay between searches
-                    
-                except Exception as e:
-                    logger.debug(f"Search query failed: {e}")
-                    continue
-            
-            if all_results:
-                # Use AI to summarize and extract key insights if API key provided
-                if api_key:
-                    logger.info("🤖 Using AI to analyze web search results...")
-                    context = self._ai_analyze_web_results(all_results, company, job_title, api_key)
-                    return context
-                else:
-                    # Return raw results
-                    unique_results = list(set(all_results))[:5]  # Remove duplicates, limit to 5
-                    return "\n\n".join(unique_results)
-            else:
-                logger.info("No web search results found")
-                return ""
+            # FALLBACK: Return search URL
+            logger.warning("⚠️ No direct job posting found - returning search URL")
+            return self._generate_fallback_search(company_expanded, job_title)
                 
         except Exception as e:
-            logger.error(f"Web search error: {e}")
-            return ""
+            logger.error(f"Intelligent search error: {e}")
+            return self._generate_fallback_search(company, job_title)
+    
+    def _is_government_entity(self, company: str) -> bool:
+        """Check if company is a government entity."""
+        gov_keywords = ['ministry', 'government', 'statutory board', 'agency', 
+                       'authority', 'board', 'singapore armed forces', 'saf']
+        company_lower = company.lower()
+        return any(keyword in company_lower for keyword in gov_keywords)
+    
+    def _search_careers_gov_fast(self, company: str, job_title: str) -> Optional[Dict]:
+        """Fast search on career@gov portal."""
+        try:
+            # career@gov search - very fast, government jobs only
+            search_query = f"{job_title} {company}".strip()
+            search_url = f"https://www.careers.gov.sg/search?search={search_query.replace(' ', '%20')}"
+            
+            response = self.session.get(search_url, timeout=3, verify=False)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.content, 'html.parser')
+                
+                # Look for job cards/links
+                job_links = soup.find_all('a', href=True, limit=5)
+                for link in job_links:
+                    href = link.get('href', '')
+                    if '/job/' in href or 'careers.gov.sg' in href:
+                        full_url = href if href.startswith('http') else f"https://www.careers.gov.sg{href}"
+                        title_elem = link.find(text=True)
+                        
+                        return {
+                            'url': full_url,
+                            'source': 'career@gov',
+                            'title': job_title,
+                            'company': company,
+                            'description': f"Government job posting from career@gov portal"
+                        }
+            
+            return None
+        except Exception as e:
+            logger.debug(f"career@gov search failed: {e}")
+            return None
+    
+    def _search_linkedin_fast(self, company: str, job_title: str, api_key: Optional[str] = None) -> Optional[Dict]:
+        """Fast targeted LinkedIn search."""
+        try:
+            # Single fast search query
+            search_query = f"{job_title} {company}".strip().replace(' ', '%20')
+            search_url = f"https://www.linkedin.com/jobs/search?keywords={search_query}&location=Singapore"
+            
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+            }
+            
+            response = requests.get(search_url, headers=headers, timeout=3, verify=False)
+            
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.content, 'html.parser')
+                
+                # Find first job link quickly
+                job_links = soup.find_all('a', href=lambda x: x and '/jobs/view/' in x, limit=3)
+                
+                if job_links:
+                    job_url = job_links[0]['href']
+                    if not job_url.startswith('http'):
+                        job_url = 'https://www.linkedin.com' + job_url
+                    
+                    # Quick scrape of the job page
+                    job_data = self._scrape_linkedin_fast(job_url)
+                    if job_data:
+                        return job_data
+            
+            return None
+        except Exception as e:
+            logger.debug(f"LinkedIn fast search failed: {e}")
+            return None
+    
+    def _scrape_linkedin_fast(self, url: str) -> Optional[Dict]:
+        """Fast LinkedIn job page scraping."""
+        try:
+            response = requests.get(url, timeout=3, verify=False)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.content, 'html.parser')
+                
+                # Extract title
+                title = None
+                title_elem = soup.find('h1', class_='top-card-layout__title') or soup.find('h1')
+                if title_elem:
+                    title = title_elem.get_text(strip=True)
+                
+                # Extract company
+                company = None
+                company_elem = soup.find('a', class_='topcard__org-name-link') or soup.find('span', class_='topcard__flavor')
+                if company_elem:
+                    company = company_elem.get_text(strip=True)
+                
+                # Extract description (first 500 chars)
+                description = ""
+                desc_elem = soup.find('div', class_='show-more-less-html__markup')
+                if desc_elem:
+                    description = desc_elem.get_text(strip=True)[:500]
+                
+                if title or description:
+                    return {
+                        'url': url,
+                        'source': 'LinkedIn',
+                        'title': title or 'Job posting',
+                        'company': company or 'Company',
+                        'description': description or 'LinkedIn job posting'
+                    }
+            
+            return None
+        except Exception as e:
+            logger.debug(f"LinkedIn scrape failed: {e}")
+            return None
+    
+    def _generate_fallback_search(self, company: str, job_title: str) -> Dict:
+        """Generate fallback with search URLs."""
+        # Try career@gov first for government
+        if self._is_government_entity(company):
+            search_query = f"{job_title} {company}".replace(' ', '%20')
+            url = f"https://www.careers.gov.sg/search?search={search_query}"
+            source = 'career@gov (search)'
+        else:
+            search_query = f"{job_title} {company}".replace(' ', '%20')
+            url = f"https://www.linkedin.com/jobs/search?keywords={search_query}&location=Singapore"
+            source = 'LinkedIn (search)'
+        
+        return {
+            'url': url,
+            'source': source,
+            'title': job_title,
+            'company': company,
+            'description': f"Search results for {job_title} at {company}. Click the link to browse available positions."
+        }
     
     def _expand_company_name(self, company: str) -> str:
         """Expand company abbreviations for better search results."""
