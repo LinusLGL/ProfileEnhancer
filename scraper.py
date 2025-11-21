@@ -87,35 +87,125 @@ class JobPortalScraper:
         return any(keyword in company_lower for keyword in gov_keywords)
     
     def _search_careers_gov_fast(self, company: str, job_title: str) -> Optional[Dict]:
-        """Fast search on career@gov portal."""
+        """Fast search on career@gov portal - extracts EXACT URL and FULL content."""
         try:
             # career@gov search - very fast, government jobs only
             search_query = f"{job_title} {company}".strip()
             search_url = f"https://www.careers.gov.sg/search?search={search_query.replace(' ', '%20')}"
             
-            response = self.session.get(search_url, timeout=3, verify=False)
+            logger.info(f"Searching career@gov: {search_url}")
+            response = self.session.get(search_url, timeout=5, verify=False)
+            
             if response.status_code == 200:
                 soup = BeautifulSoup(response.content, 'html.parser')
                 
-                # Look for job cards/links
-                job_links = soup.find_all('a', href=True, limit=5)
-                for link in job_links:
-                    href = link.get('href', '')
-                    if '/job/' in href or 'careers.gov.sg' in href:
-                        full_url = href if href.startswith('http') else f"https://www.careers.gov.sg{href}"
-                        title_elem = link.find(text=True)
+                # Look for job listing cards - career@gov specific selectors
+                job_cards = soup.find_all('div', class_=['job-card', 'jobCard', 'listing-item'], limit=5)
+                if not job_cards:
+                    # Fallback: look for any links with job-related href
+                    job_links = soup.find_all('a', href=lambda x: x and ('/job/' in x or '/listing/' in x), limit=5)
+                    for link in job_links:
+                        href = link.get('href', '')
+                        # Get exact full URL
+                        if href.startswith('http'):
+                            job_url = href
+                        elif href.startswith('/'):
+                            job_url = f"https://www.careers.gov.sg{href}"
+                        else:
+                            continue
                         
-                        return {
-                            'url': full_url,
-                            'source': 'career@gov',
-                            'title': job_title,
-                            'company': company,
-                            'description': f"Government job posting from career@gov portal"
-                        }
+                        logger.info(f"Found job URL: {job_url}")
+                        # Scrape the actual job page for full content
+                        job_details = self._scrape_careers_gov_job(job_url, company, job_title)
+                        if job_details:
+                            return job_details
+                
+                # If job cards found, extract from first card
+                for card in job_cards:
+                    link = card.find('a', href=True)
+                    if link:
+                        href = link.get('href', '')
+                        if href.startswith('http'):
+                            job_url = href
+                        elif href.startswith('/'):
+                            job_url = f"https://www.careers.gov.sg{href}"
+                        else:
+                            continue
+                        
+                        logger.info(f"Found job URL: {job_url}")
+                        job_details = self._scrape_careers_gov_job(job_url, company, job_title)
+                        if job_details:
+                            return job_details
             
             return None
         except Exception as e:
             logger.debug(f"career@gov search failed: {e}")
+            return None
+    
+    def _scrape_careers_gov_job(self, url: str, company: str, job_title: str) -> Optional[Dict]:
+        """Scrape FULL job details from career@gov job page."""
+        try:
+            logger.info(f"Scraping career@gov job: {url}")
+            response = self.session.get(url, timeout=5, verify=False)
+            
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.content, 'html.parser')
+                
+                # Extract job title
+                title = job_title  # Default
+                title_selectors = ['h1', '.job-title', '.jobTitle', '.listing-title']
+                for selector in title_selectors:
+                    title_elem = soup.select_one(selector)
+                    if title_elem:
+                        title = title_elem.get_text(strip=True)
+                        break
+                
+                # Extract company/agency
+                agency = company  # Default
+                agency_selectors = ['.agency-name', '.company-name', '.employer']
+                for selector in agency_selectors:
+                    agency_elem = soup.select_one(selector)
+                    if agency_elem:
+                        agency = agency_elem.get_text(strip=True)
+                        break
+                
+                # Extract FULL job description
+                description = ""
+                desc_selectors = [
+                    '.job-description',
+                    '.description',
+                    '.job-details',
+                    'div[class*="description"]',
+                    'div[class*="content"]'
+                ]
+                
+                for selector in desc_selectors:
+                    desc_elem = soup.select_one(selector)
+                    if desc_elem:
+                        # Get full text content
+                        description = desc_elem.get_text(separator='\n', strip=True)
+                        if len(description) > 100:  # Valid description
+                            break
+                
+                # If still no description, get main content
+                if not description or len(description) < 100:
+                    main_content = soup.find('main') or soup.find('article') or soup.find('body')
+                    if main_content:
+                        description = main_content.get_text(separator='\n', strip=True)
+                
+                logger.info(f"✅ Extracted {len(description)} chars from career@gov")
+                
+                return {
+                    'url': url,  # EXACT full URL
+                    'source': 'career@gov',
+                    'title': title,
+                    'company': agency,
+                    'description': description
+                }
+            
+            return None
+        except Exception as e:
+            logger.error(f"Failed to scrape career@gov job: {e}")
             return None
     
     def _search_linkedin_fast(self, company: str, job_title: str, api_key: Optional[str] = None) -> Optional[Dict]:
@@ -154,33 +244,84 @@ class JobPortalScraper:
             return None
     
     def _scrape_linkedin_fast(self, url: str) -> Optional[Dict]:
-        """Fast LinkedIn job page scraping."""
+        """Scrape FULL job details from LinkedIn job page."""
         try:
-            response = requests.get(url, timeout=3, verify=False)
+            logger.info(f"Scraping LinkedIn job: {url}")
+            
+            # Clean URL - remove tracking parameters for cleaner URL
+            clean_url = url.split('?')[0] if '?' in url else url
+            
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9'
+            }
+            
+            response = requests.get(url, headers=headers, timeout=5, verify=False, allow_redirects=True)
+            
             if response.status_code == 200:
                 soup = BeautifulSoup(response.content, 'html.parser')
                 
-                # Extract title
+                # Extract title - multiple selectors
                 title = None
-                title_elem = soup.find('h1', class_='top-card-layout__title') or soup.find('h1')
-                if title_elem:
-                    title = title_elem.get_text(strip=True)
+                title_selectors = [
+                    'h1.top-card-layout__title',
+                    'h2.topcard__title',
+                    'h1.topcard__title',
+                    'h1'
+                ]
+                for selector in title_selectors:
+                    title_elem = soup.select_one(selector)
+                    if title_elem:
+                        title = title_elem.get_text(strip=True)
+                        break
                 
-                # Extract company
+                # Extract company - multiple selectors
                 company = None
-                company_elem = soup.find('a', class_='topcard__org-name-link') or soup.find('span', class_='topcard__flavor')
-                if company_elem:
-                    company = company_elem.get_text(strip=True)
+                company_selectors = [
+                    'a.topcard__org-name-link',
+                    'span.topcard__flavor',
+                    'a.sub-nav-cta__optional-url',
+                    '.topcard__org-name-link'
+                ]
+                for selector in company_selectors:
+                    company_elem = soup.select_one(selector)
+                    if company_elem:
+                        company = company_elem.get_text(strip=True)
+                        break
                 
-                # Extract description (first 500 chars)
+                # Extract FULL description - not just 500 chars!
                 description = ""
-                desc_elem = soup.find('div', class_='show-more-less-html__markup')
-                if desc_elem:
-                    description = desc_elem.get_text(strip=True)[:500]
+                desc_selectors = [
+                    'div.show-more-less-html__markup',
+                    'div.description__text',
+                    'section.description',
+                    'div.core-section-container__content',
+                    'article.job-details'
+                ]
+                
+                for selector in desc_selectors:
+                    desc_elem = soup.select_one(selector)
+                    if desc_elem:
+                        # Get FULL text with proper formatting
+                        description = desc_elem.get_text(separator='\n', strip=True)
+                        if len(description) > 100:  # Valid description
+                            break
+                
+                # If no description found, try broader search
+                if not description or len(description) < 100:
+                    # Look for any div with substantial text content
+                    content_divs = soup.find_all('div', class_=lambda x: x and 'description' in x.lower())
+                    for div in content_divs:
+                        text = div.get_text(separator='\n', strip=True)
+                        if len(text) > len(description):
+                            description = text
+                
+                logger.info(f"✅ Extracted {len(description)} chars from LinkedIn")
                 
                 if title or description:
                     return {
-                        'url': url,
+                        'url': clean_url,  # EXACT clean URL
                         'source': 'LinkedIn',
                         'title': title or 'Job posting',
                         'company': company or 'Company',
