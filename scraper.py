@@ -209,7 +209,7 @@ class JobPortalScraper:
             return None
     
     def _search_linkedin_fast(self, company: str, job_title: str, api_key: Optional[str] = None) -> Optional[Dict]:
-        """Fast targeted LinkedIn search."""
+        """Fast targeted LinkedIn search with AI company matching."""
         try:
             # Single fast search query
             search_query = f"{job_title} {company}".strip().replace(' ', '%20')
@@ -225,15 +225,41 @@ class JobPortalScraper:
             if response.status_code == 200:
                 soup = BeautifulSoup(response.content, 'html.parser')
                 
-                # Find first job link quickly
-                job_links = soup.find_all('a', href=lambda x: x and '/jobs/view/' in x, limit=3)
+                # Find multiple job links for AI filtering
+                job_links = soup.find_all('a', href=lambda x: x and '/jobs/view/' in x, limit=5)
                 
-                if job_links:
+                if job_links and api_key:
+                    logger.info(f"Found {len(job_links)} jobs - using AI to match company")
+                    
+                    # Scrape all found jobs
+                    potential_jobs = []
+                    for link in job_links:
+                        job_url = link['href']
+                        if not job_url.startswith('http'):
+                            job_url = 'https://www.linkedin.com' + job_url
+                        
+                        job_data = self._scrape_linkedin_fast(job_url)
+                        if job_data:
+                            potential_jobs.append(job_data)
+                    
+                    if potential_jobs:
+                        # Use AI to select best match
+                        best_match = self._ai_select_best_job_match(
+                            potential_jobs, company, self._expand_company_name(company), job_title, api_key
+                        )
+                        if best_match:
+                            return best_match
+                        else:
+                            logger.warning(f"AI rejected all jobs - none match {company}")
+                            return None
+                
+                elif job_links:
+                    # No API key - just take first result (risky!)
+                    logger.warning("No API key - taking first result without company verification")
                     job_url = job_links[0]['href']
                     if not job_url.startswith('http'):
                         job_url = 'https://www.linkedin.com' + job_url
                     
-                    # Quick scrape of the job page
                     job_data = self._scrape_linkedin_fast(job_url)
                     if job_data:
                         return job_data

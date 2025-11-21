@@ -131,12 +131,14 @@ def process_single_job(company: str, job_title: str, job_description: str,
                     search_results = [result]
                 else:
                     # Fast intelligent search (Tavily-style)
-                    st.info("⚡ Fast intelligent search: Finding actual job posting...")
+                    st.info(f"⚡ Searching for: **{company}** - {job_title}")
                     result = scraper.intelligent_job_url_search(company, job_title, api_key)
                     
                     if result:
                         if 'search' not in result['source'].lower():
-                            st.success(f"✅ Found job posting on {result['source']}: {result['url']}")
+                            # Show company name and title from actual posting
+                            st.success(f"✅ Found: **{result['company']}** - {result['title']}")
+                            st.info(f"📍 Source: {result['source']} | [View Job Posting]({result['url']})")
                         else:
                             st.warning(f"⚠️ No direct posting found. Search URL provided.")
                         search_results = [result]
